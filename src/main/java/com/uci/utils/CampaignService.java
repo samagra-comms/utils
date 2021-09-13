@@ -89,6 +89,7 @@ public class CampaignService {
      * @return Application
      */
     public Mono<JsonNode> getCampaignFromNameTransformer(String campaignName) {
+//    	System.out.println(campaignName);
         return webClient.get()
                 .uri(builder -> builder.path("admin/v1/bot/search/").queryParam("name", campaignName).queryParam("match", true).build())
                 .retrieve()
@@ -97,12 +98,23 @@ public class CampaignService {
                          @Override
                          public JsonNode apply(String response) {
                              if (response != null) {
-                                 ObjectMapper mapper = new ObjectMapper();
+                            	 ObjectMapper mapper = new ObjectMapper();
                                  try {
-                                     return mapper.readTree(response).get("data").get(0);
-                                 } catch (JsonProcessingException e) {
+                                     JsonNode root = mapper.readTree(response);
+                                     String responseCode = root.path("responseCode").asText();
+                                     if(isApiResponseOk(responseCode)) {
+                                    	 return root.path("result").get("data").get(0);
+                                     }
+                                     return null;
+                                 } catch (JsonProcessingException jsonMappingException) {
                                      return null;
                                  }
+//                                 ObjectMapper mapper = new ObjectMapper();
+//                                 try {
+//                                     return mapper.readTree(response).get("data").get(0);
+//                                 } catch (JsonProcessingException e) {
+//                                     return null;
+//                                 }
                              }
                              return null;
                          }
@@ -222,6 +234,16 @@ public class CampaignService {
             }
         }
         return currentApplication;
+    }
+    
+    /**
+     * Check if response code sent in api response is ok
+     * 
+     * @param responseCode
+     * @return Boolean
+     */
+    private Boolean isApiResponseOk(String responseCode) {
+    	return responseCode.equals("OK");
     }
 }
 

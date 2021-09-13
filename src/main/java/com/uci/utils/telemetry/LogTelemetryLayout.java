@@ -22,7 +22,7 @@ public class LogTelemetryLayout  extends AbstractStringLayout{
     	String message = event.getMessage().getFormattedMessage();
     	LogTelemetryBuilder object = new LogTelemetryBuilder();
  		
- 		String msgBody = object.build(message, event.getLevel().toString());
+ 		String msgBody = object.build(message, null, "", "", "", "", "", "", "");
  		JSONObject jsonBody = new JSONObject(msgBody);
  		
  		return jsonBody.toString();

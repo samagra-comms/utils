@@ -10,7 +10,9 @@ public enum TelemetryEvents {
   ASSESS("ASSESS"),
   SEARCH("SEARCH"),
   LOG("LOG"),
-  ERROR("ERROR");
+  ERROR("ERROR"),
+  START("START"),
+  INTERACT("INTERACT");
   private String name;
 
   TelemetryEvents(String name) {
