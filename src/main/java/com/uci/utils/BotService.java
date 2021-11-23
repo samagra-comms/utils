@@ -6,27 +6,34 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.inversoft.rest.ClientResponse;
 import com.uci.utils.bot.util.BotUtil;
+import com.uci.utils.common.CommonUtil;
 
 import io.fusionauth.client.FusionAuthClient;
 import io.fusionauth.domain.Application;
 import io.fusionauth.domain.api.ApplicationResponse;
+import io.netty.handler.timeout.ReadTimeoutException;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.tuple.Pair;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.web.reactive.function.client.WebClient;
 import org.springframework.web.util.UriBuilder;
 
 import reactor.core.publisher.Mono;
+import reactor.netty.http.client.HttpClientRequest;
 
 import java.net.URI;
+import java.net.http.HttpTimeoutException;
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import java.util.concurrent.TimeoutException;
 import java.util.function.Function;
 
 @SuppressWarnings("ALL")
@@ -58,7 +65,7 @@ public class BotService {
                         try {
                             JsonNode root = mapper.readTree(response);
                             String responseCode = root.path("responseCode").asText();
-                            if(isApiResponseOk(responseCode) && BotUtil.checkBotValidFromJsonNode(root)) {
+                            if(CommonUtil.isWebClientApiResponseOk(responseCode) && BotUtil.checkBotValidFromJsonNode(root)) {
                             	JsonNode name = root.path("result").path("data").path("name");
                             	return name.asText();
                             }
@@ -71,7 +78,8 @@ public class BotService {
                         return "";
                     }
                 })
-                .doOnError(throwable -> log.info("Error in getting campaign: " + throwable.getMessage()))
+                .timeout(CommonUtil.getWebClientTimeoutDuration())
+                .doOnError(throwable -> log.error("Error in getting campaign: " + throwable.getMessage()))
                 .onErrorReturn("");
     }
 
@@ -86,7 +94,7 @@ public class BotService {
                         try {
                             JsonNode root = mapper.readTree(response);
                             String responseCode = root.path("responseCode").asText();
-                            if(isApiResponseOk(responseCode)) {
+                            if(CommonUtil.isWebClientApiResponseOk(responseCode)) {
                             	JsonNode name = root.path("result").path("data");
                                 if (name.has("name") && name.get("name").asText().equals(botName)) {
                                     return (((JsonNode) ((ArrayNode) name.path("logic"))).get(0).path("adapter")).asText();
@@ -101,7 +109,8 @@ public class BotService {
                     }
                     return null;
                 })
-                .doOnError(throwable -> log.info("Error in getting adpater: " + throwable.getMessage()))
+                .timeout(CommonUtil.getWebClientTimeoutDuration())
+                .doOnError(throwable -> log.error("Error in getting adpater: " + throwable.getMessage()))
                 .onErrorReturn("");
     }
 
@@ -124,7 +133,7 @@ public class BotService {
                             try {
                                 JsonNode root = mapper.readTree(response);
                                 String responseCode = root.path("responseCode").asText();
-                                if(isApiResponseOk(responseCode) && BotUtil.checkBotValidFromJsonNode(root)) {
+                                if(CommonUtil.isWebClientApiResponseOk(responseCode) && BotUtil.checkBotValidFromJsonNode(root)) {
                                 	JsonNode name = root.path("result").path("data");
 	                                if (name.has("name") && name.get("name").asText().equals(botName)) {
 	                                    return ((JsonNode) ((JsonNode) name.path("id"))).asText();
@@ -141,7 +150,8 @@ public class BotService {
                         return null;
                     }
                 })
-                .doOnError(throwable -> log.info("Error in getting bot: " + throwable.getMessage()))
+                .timeout(CommonUtil.getWebClientTimeoutDuration())
+                .doOnError(throwable -> log.error("Error in getting bot id from bot name: " + throwable.getMessage()))
                 .onErrorReturn("");
     }
     
@@ -270,7 +280,7 @@ public class BotService {
                                         try {
                                             JsonNode root = mapper.readTree(response);
                                             String responseCode = root.path("responseCode").asText();
-                                            if(isApiResponseOk(responseCode)) {
+                                            if(CommonUtil.isWebClientApiResponseOk(responseCode)) {
 	                                            Boolean status = root.path("result").path("status").asText().equalsIgnoreCase("Success");
 	                                            String userID = root.path("result").path("userID").asText();
 	                                            return Pair.of(status, userID);
@@ -283,19 +293,10 @@ public class BotService {
                                         return Pair.of(false, "");
                                     }
                                 })
-                                .doOnError(throwable -> log.info("Error in updating user: " + throwable.getMessage()))
+                                .timeout(CommonUtil.getWebClientTimeoutDuration())
+                                .doOnError(throwable -> log.error("Error in updating user: " + throwable.getMessage()))
                                 .onErrorReturn(Pair.of(false, ""));
                     }
                 });
-    }
-    
-    /**
-     * Check if response code sent in api response is ok
-     * 
-     * @param responseCode
-     * @return Boolean
-     */
-    private Boolean isApiResponseOk(String responseCode) {
-    	return responseCode.equals("OK");
     }
 }
