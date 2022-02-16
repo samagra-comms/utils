@@ -185,7 +185,11 @@ public class BotService {
 	}
 
 	public Mono<String> getBotIDFromBotName(String botName) {
+		log.info("B1 - Start");
 		String cacheKey = "Bot-id-for-bot-name: " + botName;
+		if(cache.getIfPresent(cacheKey) != null) {
+			log.info("B2 - Cache present: "+cache.getIfPresent(cacheKey).toString());
+		}
 		return CacheMono.lookup(key -> Mono.justOrEmpty(cache.getIfPresent(cacheKey) != null ? cache.getIfPresent(key).toString() : null)
 					.map(Signal::next), cacheKey)
 				.onCacheMissResume(() -> webClient.get().uri(new Function<UriBuilder, URI>() {
@@ -197,29 +201,34 @@ public class BotService {
 						}).retrieve().bodyToMono(String.class).map(new Function<String, String>() {
 							@Override
 							public String apply(String response) {
+								log.info("B3 - response: "+response);
 								if (response != null) {
 									ObjectMapper mapper = new ObjectMapper();
 									try {
 										JsonNode root = mapper.readTree(response);
 										String responseCode = root.path("responseCode").asText();
 										if (isApiResponseOk(responseCode) && BotUtil.checkBotValidFromJsonNode(root)) {
+											log.info("B4 - response ok & bot valid: "+response);
 											JsonNode name = root.path("result").path("data");
 											if (name.has("name") && name.get("name").asText().equals(botName)) {
+												log.info("B5 - bot id: "+name.path("id").asText());
 												return ((JsonNode) ((JsonNode) name.path("id"))).asText();
 				
 											}
 										}
 										return null;
 									} catch (JsonProcessingException jsonMappingException) {
+										log.info("B6 - Exception in json mapping: "+jsonMappingException.getMessage());										
 										return null;
 									}
 				
 								} else {
+									log.info("B7 - response null");										
 								}
 								return null;
 							}
 						})
-						.doOnError(throwable -> log.info("Error in getting bot: " + throwable.getMessage()))
+						.doOnError(throwable -> log.info("B8 - Error in getting bot: " + throwable.getMessage()))
 						.onErrorReturn(""))
 				.andWriteWith((key, signal) -> Mono.fromRunnable(
 						() -> Optional.ofNullable(signal.get()).ifPresent(value -> cache.put(key, value))))
@@ -329,6 +338,7 @@ public class BotService {
 	}
 
 	public Mono<Pair<Boolean, String>> updateUser(String userID, String botName) {
+		log.info("U1 - Start");
 		return getBotIDFromBotName(botName).doOnError(e -> log.error(e.getMessage()))
 				.flatMap(new Function<String, Mono<Pair<Boolean, String>>>() {
 					@Override
@@ -341,25 +351,30 @@ public class BotService {
 								return uri;
 							}
 						}).retrieve().bodyToMono(String.class).map(response -> {
+							log.info("U2 - AddUser response: "+response);
 							if (response != null) {
 								ObjectMapper mapper = new ObjectMapper();
 								try {
 									JsonNode root = mapper.readTree(response);
 									String responseCode = root.path("responseCode").asText();
 									if (isApiResponseOk(responseCode)) {
+										log.info("U3 - Api response ok");
 										Boolean status = root.path("result").path("status").asText()
 												.equalsIgnoreCase("Success");
 										String userID = root.path("result").path("userID").asText();
+										log.info("U4 - Status: "+status+", userID: "+userID);
 										return Pair.of(status, userID);
 									}
 									return Pair.of(false, "");
 								} catch (JsonProcessingException jsonMappingException) {
+									log.info("U4 - Exception in json mapping: "+jsonMappingException.getMessage());
 									return Pair.of(false, "");
 								}
 							} else {
+								log.info("U5 - AddUser response: null");
 								return Pair.of(false, "");
 							}
-						}).doOnError(throwable -> log.info("Error in updating user: " + throwable.getMessage()))
+						}).doOnError(throwable -> log.info("U6 - Error in updating user: " + throwable.getMessage()))
 								.onErrorReturn(Pair.of(false, ""));
 					}
 				});
