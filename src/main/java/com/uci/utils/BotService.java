@@ -4,7 +4,6 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
-import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
 import com.inversoft.rest.ClientResponse;
 import com.uci.utils.bot.util.BotUtil;
@@ -21,10 +20,13 @@ import org.apache.commons.lang3.tuple.Pair;
 import org.checkerframework.checker.nullness.qual.NonNull;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.cache.CacheManager;
 import org.springframework.cache.annotation.Cacheable;
+import org.springframework.cache.caffeine.CaffeineCacheManager;
 import org.springframework.stereotype.Service;
 import org.springframework.web.reactive.function.client.WebClient;
 import org.springframework.web.util.UriBuilder;
+import org.springframework.cache.Cache;
 
 import reactor.core.publisher.Mono;
 import reactor.core.publisher.Signal;
@@ -53,7 +55,7 @@ public class BotService {
 
 	public WebClient webClient;
 	public FusionAuthClient fusionAuthClient;
-	private Cache<Object, Object> cache;
+	private CacheManager cacheManager;
 	
 //	public BotService(WebClient webClient, FusionAuthClient fusionAuthClient, Caffeine<Object, Object> caffeineCacheBuilder) {
 //		this.webClient = webClient;
@@ -118,7 +120,9 @@ public class BotService {
 	 */
 	public Mono<String> getCampaignFromStartingMessage(String startingMessage) {
 		String cacheKey = "bot-name-for-starting-message:" + startingMessage;
-		return CacheMono.lookup(key -> Mono.justOrEmpty(cache.getIfPresent(cacheKey) != null ? cache.getIfPresent(key).toString() : null)
+		Cache cache = cacheManager.getCache(cacheKey);
+		
+		return CacheMono.lookup(key -> Mono.justOrEmpty(cache != null && cache.get(cacheKey) != null ? cache.get(cacheKey).get().toString() : null)
 					.map(Signal::next), cacheKey)
 				.onCacheMissResume(() -> webClient.get()
 						.uri(builder -> builder.path("admin/v1/bot/getByParam/").queryParam("startingMessage", startingMessage).build())
@@ -151,7 +155,9 @@ public class BotService {
 
 	public Mono<String> getCurrentAdapter(String botName) {
 		String cacheKey = "adpater-of-bot: " + botName;
-		return CacheMono.lookup(key -> Mono.justOrEmpty(cache.getIfPresent(cacheKey) != null ? cache.getIfPresent(key).toString() : null)
+		Cache cache = cacheManager.getCache(cacheKey);
+		
+		return CacheMono.lookup(key -> Mono.justOrEmpty(cache != null && cache.get(cacheKey) != null ? cache.get(cacheKey).get().toString() : null)
 					.map(Signal::next), cacheKey)
 				.onCacheMissResume(() -> webClient.get()
 						.uri(builder -> builder.path("admin/v1/bot/getByParam/").queryParam("name", botName).build()).retrieve()
@@ -186,7 +192,9 @@ public class BotService {
 
 	public Mono<String> getBotIDFromBotName(String botName) {
 		String cacheKey = "Bot-id-for-bot-name: " + botName;
-		return CacheMono.lookup(key -> Mono.justOrEmpty(cache.getIfPresent(cacheKey) != null ? cache.getIfPresent(key).toString() : null)
+		Cache cache = cacheManager.getCache(cacheKey);
+		
+		return CacheMono.lookup(key -> Mono.justOrEmpty(cache != null && cache.get(cacheKey) != null ? cache.get(cacheKey).get().toString() : null)
 					.map(Signal::next), cacheKey)
 				.onCacheMissResume(() -> webClient.get().uri(new Function<UriBuilder, URI>() {
 							@Override
@@ -234,7 +242,9 @@ public class BotService {
 	 */
 	public Mono<Map<String, String>> getGupshupAdpaterCredentials(String adapterID) {
 		String cacheKey = "gupshup-credentials-for-adapter: " + adapterID;
-		return CacheMono.lookup(key -> Mono.justOrEmpty((Map<String, String>) cache.getIfPresent(cacheKey))
+		Cache cache = cacheManager.getCache(cacheKey);
+		
+		return CacheMono.lookup(key -> Mono.justOrEmpty(cache != null && cache.get(cacheKey) != null ? (Map<String, String>) cache.get(cacheKey).get() : null)
 				.map(Signal::next), cacheKey)
 				.onCacheMissResume(() -> webClient.get().uri(builder -> builder.path("admin/v1/adapter/getCredentials/" + adapterID).build())
 							.retrieve().bodyToMono(String.class).map(response -> {

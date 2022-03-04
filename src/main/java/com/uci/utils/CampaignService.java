@@ -4,7 +4,6 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
-import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
 import com.inversoft.rest.ClientResponse;
 import com.uci.utils.bot.util.BotUtil;
@@ -15,6 +14,8 @@ import io.fusionauth.domain.api.ApplicationResponse;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.cache.CacheManager;
+import org.springframework.cache.Cache;
 import org.springframework.stereotype.Service;
 import org.springframework.web.reactive.function.client.WebClient;
 
@@ -36,7 +37,7 @@ public class CampaignService {
 
     public WebClient webClient;
     public FusionAuthClient fusionAuthClient;
-	private Cache<Object, Object> cache;
+	private CacheManager cacheManager;
     
 //    private static final Cache<Object, Object> cache = Caffeine.newBuilder().maximumSize(1000)
 //			.expireAfterWrite(Duration.ofSeconds(300))
@@ -50,7 +51,9 @@ public class CampaignService {
      */
     public Mono<JsonNode> getCampaignFromID(String campaignID) {
     	String cacheKey = "campaign-node-by-id:" + campaignID;
-		return CacheMono.lookup(key -> Mono.justOrEmpty((JsonNode) cache.getIfPresent(cacheKey))
+    	Cache cache = cacheManager.getCache(cacheKey);
+		
+		return CacheMono.lookup(key -> Mono.justOrEmpty(cache != null && cache.get(cacheKey) != null ? (JsonNode)cache.get(cacheKey).get() : null)
 					.map(Signal::next), cacheKey)
 				.onCacheMissResume(() -> webClient.get()
 		                .uri(builder -> builder.path("admin/v1/bot/get/" + campaignID).build())
@@ -116,7 +119,9 @@ public class CampaignService {
      */
     public Mono<JsonNode> getCampaignFromNameTransformer(String campaignName) {
     	String cacheKey = "campaign-node-by-name:" + campaignName;
-		return CacheMono.lookup(key -> Mono.justOrEmpty((JsonNode) cache.getIfPresent(cacheKey))
+    	Cache cache = cacheManager.getCache(cacheKey);
+    	
+		return CacheMono.lookup(key -> Mono.justOrEmpty(cache != null && cache.get(cacheKey) != null ? (JsonNode)cache.get(cacheKey).get() : null)
 					.map(Signal::next), cacheKey)
 				.onCacheMissResume(() -> webClient.get()
 		                .uri(builder -> builder.path("admin/v1/bot/search/").queryParam("name", campaignName).queryParam("match", true).build())
@@ -161,7 +166,9 @@ public class CampaignService {
      */
     public Mono<String> getFirstFormByBotID(String botID) {
     	String cacheKey = "form-by-bot-name:" + botID;
-		return CacheMono.lookup(key -> Mono.justOrEmpty(cache.getIfPresent(cacheKey) != null ? cache.getIfPresent(cacheKey).toString() : null)
+    	Cache cache = cacheManager.getCache(cacheKey);
+    	
+		return CacheMono.lookup(key -> Mono.justOrEmpty(cache != null && cache.get(cacheKey) != null ? cache.get(cacheKey).get().toString() : null)
 					.map(Signal::next), cacheKey)
 				.onCacheMissResume(() -> webClient.get()
 		                .uri(builder -> builder.path("admin/v1/bot/get/" + botID).build())
@@ -197,7 +204,9 @@ public class CampaignService {
 
     public Mono<String> getBotNameByBotID(String botID) {
     	String cacheKey = "bot-name-by-id:" + botID;
-		return CacheMono.lookup(key -> Mono.justOrEmpty(cache.getIfPresent(cacheKey) != null ? cache.getIfPresent(cacheKey).toString() : null)
+    	Cache cache = cacheManager.getCache(cacheKey);
+    	
+		return CacheMono.lookup(key -> Mono.justOrEmpty(cache != null && cache.get(cacheKey) != null ? cache.get(cacheKey).get().toString() : null)
 					.map(Signal::next), cacheKey)
 				.onCacheMissResume(() -> webClient.get()
 		                .uri(builder -> builder.path("admin/v1/bot/get/" + botID).build())

@@ -14,6 +14,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonMappingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.github.benmanes.caffeine.cache.Cache;
 
@@ -24,7 +25,7 @@ import lombok.extern.slf4j.Slf4j;
 @RequestMapping(value = "/cache")
 public class CacheController {
 	@Autowired
-	private Cache<Object, Object> cache;
+	private CacheManager cacheManager;
 	
 	/**
 	 * call this to invalidate all cache instances
@@ -36,10 +37,12 @@ public class CacheController {
 		try {
 			jsonNode = mapper.readTree("{\"id\":\"api.content.cache\",\"ver\":\"3.0\",\"ts\":\"2021-06-26T22:47:05Z+05:30\",\"responseCode\":\"OK\",\"result\":{}}");
 			JsonNode resultNode = mapper.createObjectNode();
-	        cache.asMap().keySet().forEach(key -> {
-	        	String cacheName = key.toString();
-	        	((ObjectNode) resultNode).put(cacheName, cache.getIfPresent(cacheName).toString());
-			});
+	        Collection<String> cacheNames = cacheManager.getCacheNames();
+	        for (String name : cacheNames) {
+	           ((ObjectNode) resultNode).put(name, (cacheManager.getCache(name) != null 
+	        		   	&& cacheManager.getCache(name).get(name) != null 
+	        			? cacheManager.getCache(name).get(name).get().toString() : null));
+	        }
 	        ((ObjectNode) jsonNode).put("result", resultNode);
 			return ResponseEntity.ok(jsonNode);
 		} catch (JsonMappingException e) {
@@ -57,14 +60,16 @@ public class CacheController {
 	 */
 	@DeleteMapping(path = "/removeAll")
 	public void removeAll() {
-		cache.asMap().keySet().forEach(key -> {
-			removeCache(key.toString());
-		});
-	}
-
-	private void removeCache(final String cacheName) {
-		if (cache.getIfPresent(cacheName) != null) {
-			cache.invalidate(cacheName);
+		Collection<String> cacheNames = cacheManager.getCacheNames();
+        for (String name : cacheNames) {
+        	cacheManager.getCache(name).clear();
+//			removeCache(key.toString());
 		}
 	}
+
+//	private void removeCache(final String cacheName) {
+//		if (cache.getIfPresent(cacheName) != null) {
+//			cache.invalidate(cacheName);
+//		}
+//	}
 }
