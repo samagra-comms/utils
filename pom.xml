@@ -19,12 +19,14 @@
 		<mockwebserver.version>4.7.2</mockwebserver.version>
 		<okhttp3.version>4.7.2</okhttp3.version>
 	</properties>
+	<!-- License -->
 	<licenses>
         <license>
             <name>The Apache License, Version 2.0</name>
             <url>http://www.apache.org/licenses/LICENSE-2.0.txt</url>
         </license>
     </licenses>
+    <!-- Developers -->
     <developers>
         <developer>
             <id>surabhi-mahawar</id>
@@ -32,12 +34,13 @@
             <email>surabhi.mahawar@aurigait.com</email>
         </developer>
     </developers>
+    <!-- SCM -->
     <scm>
         <connection>scm:git:git@github.com:samagra-comms/utils.git</connection>
         <developerConnection>scm:git:ssh://github.com:samagra-comms/utils.git</developerConnection>
         <url>https://github.com/samagra-comms/utils/tree/gh-mvn-workflow</url>
     </scm>
-
+    <!-- Profiles -->
     <profiles>
         <profile>
             <id>ci-cd</id>
@@ -69,7 +72,7 @@
             </build>
         </profile>
     </profiles>
-
+    <!-- Distribution Management -->
     <distributionManagement>
         <snapshotRepository>
             <id>ossrh</id>
@@ -253,6 +256,7 @@
 		<!-- Azure Dependencies - End -->
 	</dependencies>
 
+	<!-- Build -->
 	<build>
         <plugins>
             <plugin>
