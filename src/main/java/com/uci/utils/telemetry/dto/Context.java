@@ -22,6 +22,7 @@ public class Context {
   private Producer pdata;
   private String env;
   private String did;
+  private String sid;
   private List<Map<String, Object>> cdata;
   private Map<String, String> rollup;
 

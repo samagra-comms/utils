@@ -11,7 +11,9 @@
 	</parent>
 	<groupId>com.uci</groupId>
 	<artifactId>utils</artifactId>
-	<version>0.0.1-SNAPSHOT</version>
+	<version>0.0.3</version>
+	<!-- On changing, Set version in deploy.xml to delete the previous packages if exists and deploy new package for the specified version -->
+
 	<name>utils</name>
 	<description>Demo project for Spring Boot</description>
 	<properties>
@@ -19,6 +21,24 @@
 		<mockwebserver.version>4.7.2</mockwebserver.version>
 		<okhttp3.version>4.7.2</okhttp3.version>
 	</properties>
+	<profiles>
+		<profile>
+			<id>github</id>
+			<activation>
+				<property>
+					<name>useGitHubPackages</name>
+					<value>true</value>
+				</property>
+			</activation>
+			<distributionManagement>
+				<repository>
+					<id>github</id>
+					<name>GitHub Packages</name>
+					<url>https://maven.pkg.github.com/samagra-comms/utils</url>
+				</repository>
+			</distributionManagement>
+		</profile>
+	</profiles>
 	<dependencies>
 		<dependency>
 			<groupId>org.springframework.boot</groupId>
@@ -136,19 +156,59 @@
 			<version>${mockwebserver.version}</version>
 			<scope>test</scope>
 		</dependency>
-		 <dependency>
-	        <groupId>org.springframework.boot</groupId>
-	        <artifactId>spring-boot-starter-cache</artifactId>
-	    </dependency>	
 		<dependency>
-            <groupId>com.github.ben-manes.caffeine</groupId>
-            <artifactId>caffeine</artifactId>
-        </dependency>
-         <dependency>
-            <groupId>io.projectreactor.addons</groupId>
-            <artifactId>reactor-extra</artifactId>
-        </dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-cache</artifactId>
+		</dependency>
+		<dependency>
+			<groupId>com.github.ben-manes.caffeine</groupId>
+			<artifactId>caffeine</artifactId>
+		</dependency>
+		<dependency>
+			<groupId>io.projectreactor.addons</groupId>
+			<artifactId>reactor-extra</artifactId>
+		</dependency>
+		<!-- Minio CDN Dependencies - Start  -->
+		<dependency>
+			<groupId>io.minio</groupId>
+			<artifactId>minio</artifactId>
+			<version>8.3.6</version>
+		</dependency>
+		<!-- https://mvnrepository.com/artifact/com.squareup.okhttp3/okhttp -->
+		<dependency>
+			<groupId>com.squareup.okhttp3</groupId>
+			<artifactId>okhttp</artifactId>
+			<version>4.9.3</version>
+		</dependency>
+		<!-- Minio CDN Dependencies - End  -->
+		<!-- Redis Dependencies - Start  -->
+		<dependency>
+			<groupId>org.springframework.data</groupId>
+			<artifactId>spring-data-redis</artifactId>
+			<version>2.3.3.RELEASE</version>
+		</dependency>
 
+		<dependency>
+			<groupId>redis.clients</groupId>
+			<artifactId>jedis</artifactId>
+			<version>3.3.0</version>
+			<type>jar</type>
+		</dependency>
+		<!-- Redis Dependencies - End  -->
+		
+		<!-- Azure Dependencies - Start -->
+		<dependency>
+			<groupId>com.microsoft.azure</groupId>
+			<artifactId>azure-storage</artifactId>
+			<version>8.4.0</version>
+		</dependency>
+
+		<dependency>
+			<groupId>com.azure</groupId>
+			<artifactId>azure-storage-blob</artifactId>
+			<version>12.14.4</version>
+		</dependency>
+		<!-- Azure Dependencies - End -->
 	</dependencies>
 
 	<!-- <build> -->

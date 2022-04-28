@@ -22,8 +22,8 @@ import lombok.extern.slf4j.Slf4j;
 
 @RestController
 @Slf4j
-@RequestMapping(value = "/cache")
-public class CacheController {
+@RequestMapping(value = "/cache/caffeine")
+public class CaffeineCacheController {
 	@Autowired
 	private CacheManager cacheManager;
 	

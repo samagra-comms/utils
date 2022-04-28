@@ -40,6 +40,12 @@ public class Telemetry {
 
   private List<String> tags;
 
+  private String type;
+  
+  private List<String> flags;
+  
+  private String timestamp;
+  
   public static String getTelemetryRequestData(Telemetry telemetry) {
     String event = "";
     try {
