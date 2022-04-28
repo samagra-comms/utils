@@ -4,7 +4,6 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
-import com.github.benmanes.caffeine.cache.Caffeine;
 import com.inversoft.rest.ClientResponse;
 import com.uci.utils.bot.util.BotUtil;
 
@@ -80,7 +79,9 @@ public class BotService {
 	 */
 	public Mono<JsonNode> getBotFromStartingMessage(String startingMessage) {
 		String cacheKey = "bot-for-starting-message:" + startingMessage;
-		return CacheMono.lookup(key -> Mono.justOrEmpty(cache.getIfPresent(cacheKey) != null ? (JsonNode) cache.getIfPresent(key) : null)
+		Cache cache = cacheManager.getCache(cacheKey);
+
+		return CacheMono.lookup(key -> Mono.justOrEmpty(cache != null && cache.get(cacheKey) != null ? (JsonNode) cache.get(key) : null)
 					.map(Signal::next), cacheKey)
 				.onCacheMissResume(() -> webClient.get()
 						.uri(builder -> builder.path("admin/v1/bot/getByParam/").queryParam("startingMessage", startingMessage).build())
@@ -119,7 +120,9 @@ public class BotService {
 	 */
 	public Mono<JsonNode> getBotFromName(String botName) {
 		String cacheKey = "bot-for-name:" + botName;
-		return CacheMono.lookup(key -> Mono.justOrEmpty(cache.getIfPresent(cacheKey) != null ? (JsonNode) cache.getIfPresent(key) : null)
+		Cache cache = cacheManager.getCache(cacheKey);
+
+		return CacheMono.lookup(key -> Mono.justOrEmpty(cache != null && cache.get(cacheKey) != null ? (JsonNode) cache.get(key) : null)
 					.map(Signal::next), cacheKey)
 				.onCacheMissResume(() -> webClient.get()
 						.uri(builder -> builder.path("admin/v1/bot/search/").queryParam("name", botName).queryParam("match", true).build())
