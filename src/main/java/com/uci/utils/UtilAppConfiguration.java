@@ -12,6 +12,10 @@ import org.springframework.web.reactive.function.client.WebClient;
 
 import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
+import com.lightstep.opentelemetry.launcher.OpenTelemetryConfiguration;
+
+import io.opentelemetry.api.GlobalOpenTelemetry;
+import io.opentelemetry.api.trace.Tracer;
 
 @Configuration
 @EnableAutoConfiguration
@@ -28,6 +32,21 @@ public class UtilAppConfiguration {
 	
 	@Value("${caffeine.cache.exprie.duration.seconds}")
 	public Integer cacheExpireDuration;
+
+	@Value("${opentelemetry.lightstep.service}")
+	private String lightstepService;
+	
+	@Value("${opentelemetry.lightstep.access.token}")
+	private String lightstepAccessToken;
+	
+	@Value("${opentelemetry.lightstep.end.point}")
+	private String lightstepEndPoint;
+	
+	@Value("${opentelemetry.lightstep.tracer}")
+	private String lightstepTracer;
+	
+	@Value("${opentelemetry.lightstep.tracer.version}")
+	private String lightstepTracerVersion;
 	
 	public Caffeine<Object, Object> caffeineCacheBuilder() {
 		return Caffeine.newBuilder()
@@ -45,5 +64,17 @@ public class UtilAppConfiguration {
 	public WebClient getWebClient() {
 		return WebClient.builder().baseUrl(CAMPAIGN_URL).defaultHeader("admin-token", CAMPAIGN_ADMIN_TOKEN).build();
 	}
+	
+	@Bean
+    public Tracer OpenTelemetryTracer() {
+        OpenTelemetryConfiguration.newBuilder()
+                .setServiceName(lightstepService)
+    	        .setAccessToken(lightstepAccessToken)
+    	        .setTracesEndpoint(lightstepEndPoint)
+                .install();
 
+        Tracer tracer = GlobalOpenTelemetry
+                .getTracer(lightstepTracer, lightstepTracerVersion);
+        return tracer;
+    }
 }
