@@ -3,10 +3,9 @@ package com.uci.utils;
 import java.time.Duration;
 import java.util.UUID;
 
+import io.opentelemetry.api.trace.Tracer;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.EnableAutoConfiguration;
-import org.springframework.cache.CacheManager;
-import org.springframework.cache.caffeine.CaffeineCacheManager;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.data.redis.connection.jedis.JedisConnectionFactory;
@@ -22,6 +21,10 @@ import com.uci.utils.cdn.samagra.MinioClientProp;
 
 import io.fusionauth.client.FusionAuthClient;
 import io.fusionauth.domain.api.LoginRequest;
+import com.lightstep.opentelemetry.launcher.OpenTelemetryConfiguration;
+
+import io.opentelemetry.api.GlobalOpenTelemetry;
+import io.opentelemetry.api.trace.Tracer;
 
 @Configuration
 @EnableAutoConfiguration
@@ -77,6 +80,21 @@ public class UtilAppConfiguration {
 	
 	@Value("${spring.azure.blob.store.container.name}")
 	private String azureContainer;
+
+	@Value("${opentelemetry.lightstep.service}")
+	private String lightstepService;
+
+	@Value("${opentelemetry.lightstep.access.token}")
+	private String lightstepAccessToken;
+
+	@Value("${opentelemetry.lightstep.end.point}")
+	private String lightstepEndPoint;
+
+	@Value("${opentelemetry.lightstep.tracer}")
+	private String lightstepTracer;
+
+	@Value("${opentelemetry.lightstep.tracer.version}")
+	private String lightstepTracerVersion;
 	
 	public Caffeine<Object, Object> caffeineCacheBuilder() {
 		return Caffeine.newBuilder()
@@ -141,5 +159,19 @@ public class UtilAppConfiguration {
 			    .accountKey(azureAccountKey)
     			.container(azureContainer)
 			    .build();
-    }
+
+	}
+
+	@Bean
+	public Tracer OpenTelemetryTracer() {
+		OpenTelemetryConfiguration.newBuilder()
+				.setServiceName(lightstepService)
+				.setAccessToken(lightstepAccessToken)
+				.setTracesEndpoint(lightstepEndPoint)
+				.install();
+
+		Tracer tracer = GlobalOpenTelemetry
+				.getTracer(lightstepTracer, lightstepTracerVersion);
+		return tracer;
+	}
 }
