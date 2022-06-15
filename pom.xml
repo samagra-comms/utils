@@ -11,7 +11,7 @@
 	</parent>
 	<groupId>com.uci</groupId>
 	<artifactId>utils</artifactId>
-	<version>0.0.4</version>
+	<version>4.9.0</version>
 	<!-- On changing, Set version in deploy.xml to delete the previous packages if exists and deploy new package for the specified version -->
 
 	<name>utils</name>
