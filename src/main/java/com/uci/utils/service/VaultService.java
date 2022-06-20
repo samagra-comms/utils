@@ -28,6 +28,11 @@ import java.util.UUID;
 @AllArgsConstructor
 @Service
 public class VaultService {
+
+    /**
+     * Get Fusion Auth Login Token for vault service
+     * @return
+     */
     public String getLoginToken() {
         FusionAuthClient fusionAuthClient = new FusionAuthClient(System.getenv("VAULT_FUSION_AUTH_TOKEN"), System.getenv("VAULT_FUSION_AUTH_URL"));
         LoginRequest loginRequest = new LoginRequest();
