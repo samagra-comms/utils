@@ -50,6 +50,19 @@ public class PosthogService {
 		
 		return sendEvent("response", dataNode);
 	}
+
+	public Mono<String> sendTelemetryEvent(String userId, String telemetry) throws Exception{
+		String distinctId = userId;
+		ObjectMapper mapper = new ObjectMapper();
+		JsonNode actualObj = mapper.readTree(telemetry);
+//			ObjectNode propertiesNode = mapper.createObjectNode();
+
+		ObjectNode dataNode = mapper.createObjectNode();
+		dataNode.put("properties", actualObj);
+		dataNode.put("distinct_id", userId);
+
+		return sendEvent("telemetry", dataNode);
+	}
 	
 	@SuppressWarnings("deprecation")
 	public Mono<String> sendEvent(String event, ObjectNode dataNode) {
