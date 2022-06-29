@@ -45,15 +45,15 @@ public class CampaignService {
     /**
      * Retrieve Campaign Params From its Identifier
      *
-     * @param campaignID - Campaign Identifier
+     * @param botId - Bot Identifier
      * @return Application
      */
-    public Mono<JsonNode> getCampaignFromID(String campaignID) {
-    	String cacheKey = "campaign-node-by-id:" + campaignID;
+    public Mono<JsonNode> getCampaignFromID(String botId) {
+    	String cacheKey = "campaign-node-by-id:" + botId;
 		return CacheMono.lookup(key -> Mono.justOrEmpty((JsonNode) cache.getIfPresent(cacheKey))
 					.map(Signal::next), cacheKey)
 				.onCacheMissResume(() -> webClient.get()
-		                .uri(builder -> builder.path("admin/v1/bot/get/" + campaignID).build())
+		                .uri(builder -> builder.path("admin/v1/bot/get/" + botId).build())
 		                .retrieve()
 		                .bodyToMono(String.class)
 		                .map(response -> {
@@ -82,11 +82,11 @@ public class CampaignService {
     /**
      * Retrieve Campaign Params From its Name
      *
-     * @param campaignName - Campaign Name
+     * @param botName - Bot Name
      * @return Application
      * @throws Exception Error Exception, in failure in Network request.
      */
-    public Application getCampaignFromName(String campaignName) throws Exception {
+    public Application getCampaignFromName(String botName) throws Exception {
         List<Application> applications = new ArrayList<>();
         ClientResponse<ApplicationResponse, Void> response = fusionAuthClient.retrieveApplications();
         if (response.wasSuccessful()) {
@@ -99,7 +99,7 @@ public class CampaignService {
         Application currentApplication = null;
         if (applications.size() > 0) {
             for (Application application : applications) {
-                if (application.name.equals(campaignName)) {
+                if (application.name.equals(botName)) {
                     currentApplication = application;
                 }
             }
@@ -111,15 +111,15 @@ public class CampaignService {
     /**
      * Retrieve Campaign Params From its Name
      *
-     * @param campaignName - Campaign Name
+     * @param botName - Campaign Name
      * @return Application
      */
-    public Mono<JsonNode> getCampaignFromNameTransformer(String campaignName) {
-    	String cacheKey = "campaign-node-by-name:" + campaignName;
+    public Mono<JsonNode> getCampaignFromNameTransformer(String botName) {
+    	String cacheKey = "campaign-node-by-name:" + botName;
 		return CacheMono.lookup(key -> Mono.justOrEmpty((JsonNode) cache.getIfPresent(cacheKey))
 					.map(Signal::next), cacheKey)
 				.onCacheMissResume(() -> webClient.get()
-		                .uri(builder -> builder.path("admin/v1/bot/search/").queryParam("name", campaignName).queryParam("match", true).build())
+		                .uri(builder -> builder.path("admin/v1/bot/search/").queryParam("name", botName).queryParam("match", true).build())
 		                .retrieve()
 		                .bodyToMono(String.class)
 		                .map(new Function<String, JsonNode>() {
@@ -263,11 +263,11 @@ public class CampaignService {
     /**
      * Retrieve Campaign Params From its Name
      *
-     * @param campaignName - Campaign Name
+     * @param botName - Campaign Name
      * @return Application
      * @throws Exception Error Exception, in failure in Network request.
      */
-    public Application getCampaignFromNameESamwad(String campaignName) {
+    public Application getCampaignFromNameESamwad(String botName) {
         List<Application> applications = new ArrayList<>();
         ClientResponse<ApplicationResponse, Void> response = fusionAuthClient.retrieveApplications();
         if (response.wasSuccessful()) {
@@ -280,7 +280,7 @@ public class CampaignService {
         if (applications.size() > 0) {
             for (Application application : applications) {
                 try {
-                    if (application.data.get("appName").equals(campaignName)) {
+                    if (application.data.get("appName").equals(botName)) {
                         currentApplication = application;
                     }
                 } catch (Exception e) {
