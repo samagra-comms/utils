@@ -342,9 +342,9 @@ public class BotService {
 	 * @return Application
 	 * @throws Exception Error Exception, in failure in Network request.
 	 */
-	public Application getCampaignFromID(String campaignID) throws Exception {
+	public Application getCampaignFromID(String botId) throws Exception {
 		ClientResponse<ApplicationResponse, Void> applicationResponse = fusionAuthClient
-				.retrieveApplication(UUID.fromString(campaignID));
+				.retrieveApplication(UUID.fromString(botId));
 		if (applicationResponse.wasSuccessful()) {
 			return applicationResponse.successResponse.application;
 		} else if (applicationResponse.exception != null) {
@@ -359,13 +359,13 @@ public class BotService {
 	 * @param campaignName - Campaign Name
 	 * @return Application
 	 */
-	private Application getCampaignFromName(String campaignName) {
+	private Application getCampaignFromName(String botName) {
 		List<Application> applications = getApplications();
 
 		Application currentApplication = null;
 		if (applications.size() > 0) {
 			for (Application application : applications) {
-				if (application.name.equals(campaignName)) {
+				if (application.name.equals(botName)) {
 					currentApplication = application;
 				}
 			}
