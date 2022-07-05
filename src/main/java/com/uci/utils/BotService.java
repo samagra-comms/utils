@@ -94,9 +94,14 @@ public class BotService {
 									ObjectMapper mapper = new ObjectMapper();
 									JsonNode root = mapper.readTree(response);
 									String responseCode = root.path("responseCode").asText();
-									if (isApiResponseOk(responseCode)) {
-										return root;
+									if (isApiResponseOk(responseCode) && root.path("result") != null
+										&& root.path("result").path("data") != null
+											&& !root.path("result").path("data").isEmpty()) {
+										return root.path("result").path("data");
 									}
+//									if(root.path("result") != null && root.path("result").get(0) != null && !root.path("result").get(0).isEmpty()) {
+//										return root.path("result").get(0);
+//									}
 									return new ObjectMapper().createObjectNode();
 								} catch (JsonProcessingException jsonMappingException) {
 									return new ObjectMapper().createObjectNode();

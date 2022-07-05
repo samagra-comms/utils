@@ -34,26 +34,27 @@ public class VaultService {
      * Get Fusion Auth Login Token for vault service
      * @return
      */
-    public String getLoginToken() {
-        String cacheKey = "vault-login-token";
-        if(cache.getIfPresent(cacheKey) != null) {
-            log.info("vault user token found");
-            return cache.getIfPresent(cacheKey).toString();
-        }
-        log.info("fetch vault user token");
-        FusionAuthClient fusionAuthClient = new FusionAuthClient(System.getenv("VAULT_FUSION_AUTH_TOKEN"), System.getenv("VAULT_FUSION_AUTH_URL"));
-        LoginRequest loginRequest = new LoginRequest();
-        loginRequest.loginId = "uci-user";
-        loginRequest.password = "abcd1234";
-        loginRequest.applicationId = UUID.fromString("a1313380-069d-4f4f-8dcb-0d0e717f6a6b");
-        ClientResponse<LoginResponse, Errors> loginResponse = fusionAuthClient.login(loginRequest);
-        if(loginResponse.wasSuccessful()) {
-            cache.put(cacheKey, loginResponse.successResponse.token);
-            return loginResponse.successResponse.token;
-        } else {
-            return null;
-        }
-    }
+    /** NOT IN USE - using admin token directly **/
+//    public String getLoginToken() {
+//        String cacheKey = "vault-login-token";
+//        if(cache.getIfPresent(cacheKey) != null) {
+//            log.info("vault user token found");
+//            return cache.getIfPresent(cacheKey).toString();
+//        }
+//        log.info("fetch vault user token");
+//        FusionAuthClient fusionAuthClient = new FusionAuthClient(System.getenv("VAULT_FUSION_AUTH_TOKEN"), System.getenv("VAULT_FUSION_AUTH_URL"));
+//        LoginRequest loginRequest = new LoginRequest();
+//        loginRequest.loginId = "uci-user";
+//        loginRequest.password = "abcd1234";
+//        loginRequest.applicationId = UUID.fromString("a1313380-069d-4f4f-8dcb-0d0e717f6a6b");
+//        ClientResponse<LoginResponse, Errors> loginResponse = fusionAuthClient.login(loginRequest);
+//        if(loginResponse.wasSuccessful()) {
+//            cache.put(cacheKey, loginResponse.successResponse.token);
+//            return loginResponse.successResponse.token;
+//        } else {
+//            return null;
+//        }
+//    }
 
     /**
      * Retrieve Adapter Credentials From its Identifier
@@ -62,8 +63,8 @@ public class VaultService {
      * @return Application
      */
     public Mono<JsonNode> getAdpaterCredentials(String secretKey) {
-        String userToken = getLoginToken();
-        if(userToken == null || userToken.isEmpty()) {
+        String adminToken = System.getenv("VAULT_SERVICE_TOKEN");
+        if(adminToken == null || adminToken.isEmpty()) {
             return Mono.just(null);
         }
         WebClient webClient = WebClient.builder().baseUrl(System.getenv("VAULT_SERVICE_URL")).build();
@@ -75,7 +76,7 @@ public class VaultService {
                         .headers(httpHeaders ->{
                             httpHeaders.set("ownerId", "8f7ee860-0163-4229-9d2a-01cef53145ba");
                             httpHeaders.set("ownerOrgId", "org1");
-                            httpHeaders.set("Authorization", "Bearer "+userToken);
+                            httpHeaders.set("admin-token", adminToken);
                         })
                         .retrieve().bodyToMono(String.class).map(response -> {
                             if (response != null) {
