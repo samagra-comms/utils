@@ -6,13 +6,18 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
+import com.inversoft.error.Errors;
 import com.inversoft.rest.ClientResponse;
 import com.uci.utils.bot.util.BotUtil;
 
 import ch.qos.logback.core.Context;
+import com.uci.utils.cache.service.RedisCacheService;
 import io.fusionauth.client.FusionAuthClient;
 import io.fusionauth.domain.Application;
 import io.fusionauth.domain.api.ApplicationResponse;
+import io.fusionauth.domain.api.LoginRequest;
+import io.fusionauth.domain.api.LoginResponse;
+import io.r2dbc.postgresql.codec.Json;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.Setter;
@@ -89,9 +94,14 @@ public class BotService {
 									ObjectMapper mapper = new ObjectMapper();
 									JsonNode root = mapper.readTree(response);
 									String responseCode = root.path("responseCode").asText();
-									if (isApiResponseOk(responseCode)) {
-										return root;
+									if (isApiResponseOk(responseCode) && root.path("result") != null
+										&& root.path("result").path("data") != null
+											&& !root.path("result").path("data").isEmpty()) {
+										return root.path("result").path("data");
 									}
+//									if(root.path("result") != null && root.path("result").get(0) != null && !root.path("result").get(0).isEmpty()) {
+//										return root.path("result").get(0);
+//									}
 									return new ObjectMapper().createObjectNode();
 								} catch (JsonProcessingException jsonMappingException) {
 									return new ObjectMapper().createObjectNode();
@@ -337,9 +347,9 @@ public class BotService {
 	 * @return Application
 	 * @throws Exception Error Exception, in failure in Network request.
 	 */
-	public Application getCampaignFromID(String campaignID) throws Exception {
+	public Application getCampaignFromID(String botId) throws Exception {
 		ClientResponse<ApplicationResponse, Void> applicationResponse = fusionAuthClient
-				.retrieveApplication(UUID.fromString(campaignID));
+				.retrieveApplication(UUID.fromString(botId));
 		if (applicationResponse.wasSuccessful()) {
 			return applicationResponse.successResponse.application;
 		} else if (applicationResponse.exception != null) {
@@ -354,13 +364,13 @@ public class BotService {
 	 * @param campaignName - Campaign Name
 	 * @return Application
 	 */
-	private Application getCampaignFromName(String campaignName) {
+	private Application getCampaignFromName(String botName) {
 		List<Application> applications = getApplications();
 
 		Application currentApplication = null;
 		if (applications.size() > 0) {
 			for (Application application : applications) {
-				if (application.name.equals(campaignName)) {
+				if (application.name.equals(botName)) {
 					currentApplication = application;
 				}
 			}
@@ -403,6 +413,45 @@ public class BotService {
 								.onErrorReturn(Pair.of(false, ""));
 					}
 				});
+	}
+
+	public Mono<JsonNode> getAdapterByID(String adapterID) {
+		String cacheKey = "adapter-by-id: " + adapterID;
+		return CacheMono.lookup(key -> Mono.justOrEmpty(cache.getIfPresent(cacheKey) != null ? (JsonNode) cache.getIfPresent(key) : null)
+						.map(Signal::next), cacheKey)
+				.onCacheMissResume(() -> webClient.get().uri(new Function<UriBuilder, URI>() {
+							@Override
+							public URI apply(UriBuilder builder) {
+								URI uri = builder.path("admin/v1/adapter/get/"+adapterID).build();
+								return uri;
+							}
+						}).retrieve().bodyToMono(String.class).map(new Function<String, JsonNode>() {
+							@Override
+							public JsonNode apply(String response) {
+								if (response != null) {
+									ObjectMapper mapper = new ObjectMapper();
+									try {
+										JsonNode root = mapper.readTree(response);
+										String responseCode = root.path("responseCode").asText();
+										if (isApiResponseOk(responseCode) && root.path("result") != null && root.path("result").path("data") != null) {
+											JsonNode adapter = root.path("result").path("data");
+											return adapter;
+										}
+										return null;
+									} catch (JsonProcessingException jsonMappingException) {
+										return null;
+									}
+
+								} else {
+								}
+								return null;
+							}
+						})
+						.doOnError(throwable -> log.info("Error in getting bot: " + throwable.getMessage()))
+						.onErrorReturn(null))
+				.andWriteWith((key, signal) -> Mono.fromRunnable(
+						() -> Optional.ofNullable(signal.get()).ifPresent(value -> cache.put(key, value))))
+				.log("cache");
 	}
 
 	/**
