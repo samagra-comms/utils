@@ -21,6 +21,7 @@ public class BotUtil {
 	public static String botLiveStatus = "live";
 
 	public static String adminUserId = "admin";
+	public static String botTypeBroadcast = "broadcast";
 
 	/**
 	 * Get true if bot is valid else invalid message, from json node data
