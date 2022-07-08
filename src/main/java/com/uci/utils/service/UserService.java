@@ -1,16 +1,14 @@
 package com.uci.utils.service;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.inversoft.error.Errors;
 import com.inversoft.rest.ClientResponse;
-import com.uci.utils.CampaignService;
+import com.uci.utils.BotService;
 import com.uci.utils.model.FAUser;
 import com.uci.utils.model.FAUserSegment;
-import com.uci.utils.model.UserWithTemplate;
 
 import io.fusionauth.client.FusionAuthClient;
 import io.fusionauth.domain.Application;
@@ -42,7 +40,7 @@ import java.util.concurrent.TimeUnit;
 public class UserService {
 
 	@Autowired
-	private CampaignService campaignService;
+	private BotService botService;
 
 	@Value("${campaign.url}")
     public String CAMPAIGN_URL;
@@ -143,32 +141,12 @@ public class UserService {
 		return null;
 	}
 
-	public User findByPhone(String phone) {
-		UserSearchCriteria usc = new UserSearchCriteria();
-		usc.queryString = "*" + phone + "*";
-		usc.numberOfResults = 100;
-		SearchRequest sr = new SearchRequest(usc);
-		ClientResponse<SearchResponse, Errors> cr = fusionAuthClient.searchUsersByQueryString(sr);
-		if (cr.wasSuccessful()) {
-			return cr.successResponse.users.get(0);
-		} else if (cr.exception != null) {
-			// Exception Handling
-			Exception exception = cr.exception;
-			log.error("Exception in getting users for campaign: " + exception.toString());
-		}
-		return null;
-	}
-
-	public void findAllFCMDeviceUsers() {
-//		ClientResponse<SearchResponse, Errors> cr = fusionAuthClient.searc;
-	}
-
 	public List<User> findUsersForCampaign(String campaignName) throws Exception {
 
 		// Fixme: Important
 		/*
 		 * Application currentApplication =
-		 * CampaignService.getCampaignFromName(campaignName); FusionAuthClient
+		 * botService.getCampaignFromName(campaignName); FusionAuthClient
 		 * staticClient = getFusionAuthClient(); if(currentApplication != null){
 		 * UserSearchCriteria usc = new UserSearchCriteria(); usc.numberOfResults =
 		 * 10000; usc.queryString = "(memberships.groupId: " +
@@ -207,7 +185,7 @@ public class UserService {
 		List<String> userPhoneNumbers = new ArrayList<>();
 
 		Set<String> userSet = new HashSet<String>();
-		Application currentApplication = campaignService.getCampaignFromNameESamwad(campaignName);
+		Application currentApplication = botService.getCampaignFromNameESamwad(campaignName);
 		FusionAuthClient clientLogin = fusionAuthClient;
 		if (currentApplication != null) {
 			// TODO: Step 1 => Get groups for application
@@ -271,32 +249,6 @@ public class UserService {
 		return usersList;
 	}
 
-	public List<String> getUsersPhoneFromFederatedServers(String campaignName) {
-
-		Application currentApplication = campaignService.getCampaignFromNameESamwad(campaignName);
-
-		String baseURL = shortnrBaseURL + "/getAllUsers";
-		OkHttpClient client = new OkHttpClient().newBuilder().connectTimeout(90, TimeUnit.SECONDS)
-				.writeTimeout(90, TimeUnit.SECONDS).readTimeout(90, TimeUnit.SECONDS).build();
-		MediaType mediaType = MediaType.parse("application/json");
-		Map data = new HashMap<String, String>();
-		data.put("application", currentApplication.id);
-		JSONObject jsonData = new JSONObject(data);
-		RequestBody body = RequestBody.create(mediaType, jsonData.toString());
-		Request request = new Request.Builder().url(baseURL).method("POST", body)
-				.addHeader("Content-Type", "application/json").build();
-		try {
-			Response response = client.newCall(request).execute();
-			ArrayList<String> userPhonesResponse = JSONArrayToList(
-					(new JSONObject(response.body().string())).getJSONArray("data"));
-			return userPhonesResponse;
-
-		} catch (IOException e) {
-			e.printStackTrace();
-		}
-		return null;
-	}
-
 	public JSONArray getUsersFromFederatedServers(String campaignID) {
 
 		String baseURL = CAMPAIGN_URL + "/admin/v1/bot/getAllUsers/" + campaignID;
@@ -310,36 +262,6 @@ public class UserService {
 			Response response = client.newCall(request).execute();
 			return (new JSONObject(response.body().string())).getJSONObject("result").getJSONArray("data");
 		} catch (Exception e) {
-			e.printStackTrace();
-		}
-		return null;
-	}
-
-	public ArrayList<UserWithTemplate> getUsersAndTemplateFromFederatedServers(String campaignName) {
-
-		Application currentApplication = campaignService.getCampaignFromNameESamwad(campaignName);
-		String baseURL = shortnrBaseURL + "/usersWithTemplate";
-		OkHttpClient client = new OkHttpClient().newBuilder().connectTimeout(90, TimeUnit.SECONDS)
-				.writeTimeout(90, TimeUnit.SECONDS).readTimeout(90, TimeUnit.SECONDS).build();
-		MediaType mediaType = MediaType.parse("application/json");
-		Map data = new HashMap<String, String>();
-		data.put("application", currentApplication.id);
-		JSONObject jsonData = new JSONObject(data);
-		RequestBody body = RequestBody.create(mediaType, jsonData.toString());
-		Request request = new Request.Builder().url(baseURL).method("POST", body)
-				.addHeader("Content-Type", "application/json").build();
-		try {
-			Response response = client.newCall(request).execute();
-			ArrayList<UserWithTemplate> usersWithTemplate = new ArrayList<>();
-			JSONArray t = (new JSONObject(response.body().string())).getJSONArray("users");
-			for (int i = 0; i < t.length(); i++) {
-				JSONObject o = (JSONObject) t.get(i);
-				UserWithTemplate e = new UserWithTemplate(o.getString("phone"), o.getString("message"));
-				usersWithTemplate.add(e);
-			}
-			return usersWithTemplate;
-
-		} catch (IOException e) {
 			e.printStackTrace();
 		}
 		return null;
@@ -444,13 +366,6 @@ public class UserService {
 		return null;
 	}
 
-	public User getInfoForUser(String userID) {
-		List<UUID> ids = new ArrayList<>();
-		ids.add(UUID.fromString(userID));
-		ClientResponse<SearchResponse, Errors> cr = fusionAuthClient.searchUsers(ids);
-		return cr.successResponse.users.get(0);
-	}
-
 	public User update(User user) {
 		ClientResponse<UserResponse, Errors> userResponse = fusionAuthClient.updateUser(user.id,
 				new UserRequest(false, false, user));
@@ -464,17 +379,6 @@ public class UserService {
 		try {
 			String role = (String) applicant.data.get("role");
 			if (role.equals("Program Associate"))
-				return true;
-			return false;
-		} catch (Exception e) {
-			return true;
-		}
-	}
-
-	public Boolean isCoordinator(User applicant) {
-		try {
-			String role = (String) applicant.data.get("role");
-			if (role.equals("Program Coordinator"))
 				return true;
 			return false;
 		} catch (Exception e) {
