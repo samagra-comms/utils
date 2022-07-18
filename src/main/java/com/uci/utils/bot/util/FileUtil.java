@@ -1,11 +1,28 @@
 package com.uci.utils.bot.util;
 
+import java.io.File;
+import java.io.IOException;
+import java.net.URLConnection;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.ArrayList;
 
 import com.fasterxml.jackson.databind.JsonNode;
 
 public class FileUtil {
 
+	/**
+	 * Function to get Mime type of file from url
+	 * @param url
+	 * @return
+	 * @throws IOException
+	 */
+	public static String getMimeTypeFromUrl(String url) throws IOException {
+		File file = new File(url);
+		URLConnection connection = file.toURL().openConnection();
+		String mimeType = connection.getContentType();
+		return mimeType;
+	}
 	
 	/**
 	 * Check if file type is image
