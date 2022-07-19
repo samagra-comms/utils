@@ -15,6 +15,7 @@ import lombok.Getter;
 import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.tuple.Pair;
+import org.springframework.http.MediaType;
 import org.springframework.stereotype.Service;
 import org.springframework.web.reactive.function.client.WebClient;
 import org.springframework.web.util.UriBuilder;
@@ -250,46 +251,6 @@ public class BotService {
 						() -> Optional.ofNullable(signal.get()).ifPresent(value -> cache.put(key, value))))
 				.log("cache");
 	}
-	
-	/**
-	 * Retrieve Campaign Params From its Identifier
-	 *
-	 * @param campaignID - Campaign Identifier
-	 * @return Application
-	 */
-	public Mono<Map<String, String>> getGupshupAdpaterCredentials(String adapterID) {
-		String cacheKey = "gupshup-credentials-for-adapter: " + adapterID;
-		return CacheMono.lookup(key -> Mono.justOrEmpty((Map<String, String>) cache.getIfPresent(cacheKey))
-				.map(Signal::next), cacheKey)
-				.onCacheMissResume(() -> webClient.get().uri(builder -> builder.path("admin/v1/adapter/getCredentials/" + adapterID).build())
-							.retrieve().bodyToMono(String.class).map(response -> {
-								if (response != null) {
-									ObjectMapper mapper = new ObjectMapper();
-									try {
-										Map<String, String> credentials = new HashMap<String, String>();
-										JsonNode root = mapper.readTree(response);
-										String responseCode = root.path("responseCode").asText();
-										if (isApiResponseOk(responseCode)) {
-											JsonNode result = root.path("result");
-											credentials.put("username2Way", result.findValue("username2Way").asText());
-											credentials.put("password2Way", result.findValue("password2Way").asText());
-											credentials.put("usernameHSM", result.findValue("usernameHSM").asText());
-											credentials.put("passwordHSM", result.findValue("passwordHSM").asText());
-											System.out.println(credentials);
-											return credentials;
-										}
-										return null;
-									} catch (JsonProcessingException e) {
-										return null;
-									}
-								}
-								return null;
-							}))
-				.andWriteWith((key, signal) -> Mono.fromRunnable(
-						() -> Optional.ofNullable(signal.get()).ifPresent(value -> cache.put(key, value))))
-				.log("cache");
-					
-	}
 
 	/**
 	 * Update fusion auth user - using V1 apis
@@ -302,11 +263,11 @@ public class BotService {
 				.flatMap(new Function<String, Mono<Pair<Boolean, String>>>() {
 					@Override
 					public Mono<Pair<Boolean, String>> apply(String botID) {
-						WebClient webClient2 = WebClient.builder().baseUrl(System.getenv("CAMPAIGN_URL_V1")).defaultHeader("admin-token", System.getenv("CAMPAIGN_ADMIN_TOKEN_V1")).build();
-						return webClient2.get().uri(new Function<UriBuilder, URI>() {
+//						WebClient webClient2 = WebClient.builder().baseUrl(System.getenv("CAMPAIGN_URL_V1")).defaultHeader("admin-token", System.getenv("CAMPAIGN_ADMIN_TOKEN_V1")).build();
+						return webClient.get().uri(new Function<UriBuilder, URI>() {
 							@Override
 							public URI apply(UriBuilder builder) {
-								String base = String.format("/admin/v1/userSegment/addUser/%s/%s", botID, userID);
+								String base = String.format("/admin/bot/%s/addUser/%s", botID, userID);
 								URI uri = builder.path(base).build();
 								return uri;
 							}
@@ -316,11 +277,12 @@ public class BotService {
 								try {
 									JsonNode root = mapper.readTree(response);
 									String responseCode = root.path("responseCode").asText();
-									if (isApiResponseOk(responseCode)) {
-										Boolean status = root.path("result").path("status").asText()
-												.equalsIgnoreCase("Success");
-										String userID = root.path("result").path("userID").asText();
-										return Pair.of(status, userID);
+									if (root.path("result") != null && root.path("result").path("status") != null
+											&& (root.path("result").path("status").asText().equalsIgnoreCase("USER_ADDED")
+												|| root.path("result").path("status").asText().equalsIgnoreCase("USER_EXISTS"))
+									) {
+										String userID = root.path("result").path("userId").asText();
+										return Pair.of(true, userID);
 									}
 									return Pair.of(false, "");
 								} catch (JsonProcessingException jsonMappingException) {
