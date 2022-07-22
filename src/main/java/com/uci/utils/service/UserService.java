@@ -233,7 +233,7 @@ public class UserService {
 
 	public JSONArray getUsersFromFederatedServers(String campaignID) {
 
-		String baseURL = CAMPAIGN_URL + "/admin/v1/bot/getAllUsers/" + campaignID;
+		String baseURL = CAMPAIGN_URL + "/admin/bot/getAllUsers/" + campaignID;
 		OkHttpClient client = new OkHttpClient().newBuilder().connectTimeout(90, TimeUnit.SECONDS)
 				.writeTimeout(90, TimeUnit.SECONDS).readTimeout(90, TimeUnit.SECONDS).build();
 		MediaType mediaType = MediaType.parse("application/json");
@@ -242,7 +242,7 @@ public class UserService {
 								.addHeader("admin-token", CAMPAIGN_ADMIN_TOKEN).build();
 		try {
 			Response response = client.newCall(request).execute();
-			return (new JSONObject(response.body().string())).getJSONObject("result").getJSONArray("data");
+			return (new JSONObject(response.body().string())).getJSONArray("result");
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
