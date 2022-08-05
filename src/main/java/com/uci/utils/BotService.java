@@ -315,6 +315,85 @@ public class BotService {
 					
 	}
 
+	/**
+	 * Get adapter credentials by id
+	 * @param adapterID
+	 * @return
+	 */
+	public Mono<JsonNode> getAdapterCredentials(String adapterID) {
+		String cacheKey = "adapter-credentials: " + adapterID;
+		return getAdapterByID(adapterID).map(new Function<JsonNode, Mono<JsonNode>>() {
+			@Override
+			public Mono<JsonNode> apply(JsonNode adapter) {
+				log.info("adapter: "+adapter);
+				if(adapter != null) {
+					String vaultKey;
+					try{
+						vaultKey = adapter.path("config").path("credentials").path("variable").asText();
+					} catch (Exception ex) {
+						log.error("Exception in fetching adapter variable from json node: "+ex.getMessage());
+						vaultKey = null;
+					}
+
+					if(vaultKey != null && !vaultKey.isEmpty()) {
+						return getVaultCredentials(vaultKey);
+					}
+				}
+				return Mono.just(null);
+			}
+		}).flatMap(new Function<Mono<JsonNode>, Mono<? extends JsonNode>>() {
+			@Override
+			public Mono<? extends JsonNode> apply(Mono<JsonNode> n) {
+				log.info("Mono FlatMap Level 1");
+				return n;
+			}
+		});
+	}
+
+	/**
+	 * Retrieve vault credentials from its Identifier
+	 *
+	 * @param secretKey - vault key Identifier
+	 * @return Application
+	 */
+	public Mono<JsonNode> getVaultCredentials(String secretKey) {
+		String adminToken = System.getenv("VAULT_SERVICE_TOKEN");
+		if(adminToken == null || adminToken.isEmpty()) {
+			return Mono.just(null);
+		}
+		WebClient webClient = WebClient.builder().baseUrl(System.getenv("VAULT_SERVICE_URL")).build();
+		String cacheKey = "adapter-credentials-by-id: " + secretKey;
+		return CacheMono.lookup(key -> Mono.justOrEmpty(cache.getIfPresent(cacheKey) != null ? (JsonNode) cache.getIfPresent(key) : null)
+						.map(Signal::next), cacheKey)
+				.onCacheMissResume(() -> webClient.get()
+						.uri(builder -> builder.path("admin/secret/" + secretKey).build())
+						.headers(httpHeaders ->{
+							httpHeaders.set("ownerId", "8f7ee860-0163-4229-9d2a-01cef53145ba");
+							httpHeaders.set("ownerOrgId", "org1");
+							httpHeaders.set("admin-token", adminToken);
+						})
+						.retrieve().bodyToMono(String.class).map(response -> {
+							if (response != null) {
+								ObjectMapper mapper = new ObjectMapper();
+								try {
+									Map<String, String> credentials = new HashMap<String, String>();
+									JsonNode root = mapper.readTree(response);
+									if(root.path("result") != null && root.path("result").path(secretKey) != null) {
+										return root.path("result").path(secretKey);
+									}
+									return null;
+								} catch (JsonProcessingException e) {
+									return null;
+								}
+							}
+							return null;
+						}).doOnError(throwable -> log.info("Error in getting bot: " + throwable.getMessage())).onErrorReturn(null))
+				.andWriteWith((key, signal) -> Mono.fromRunnable(
+						() -> Optional.ofNullable(signal.get()).ifPresent(value -> cache.put(key, value))))
+				.log("cache");
+
+	}
+
 	
 	public Application getButtonLinkedApp(String appName) {
 		try {
