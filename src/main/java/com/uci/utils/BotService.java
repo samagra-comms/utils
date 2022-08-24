@@ -319,8 +319,8 @@ public class BotService {
 									ObjectMapper mapper = new ObjectMapper();
 									try {
 										JsonNode root = mapper.readTree(response);
-										if(root != null && root.path("id") != null && !root.path("id").asText().isEmpty()) {
-											return root;
+										if(root != null && root.path("result") != null && root.path("result").path("id") != null && !root.path("result").path("id").asText().isEmpty()) {
+											return root.path("result");
 										}
 										return null;
 									} catch (JsonProcessingException jsonMappingException) {
