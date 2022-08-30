@@ -5,8 +5,13 @@ import java.text.SimpleDateFormat;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.Date;
+import java.util.List;
 import java.util.UUID;
 
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.ObjectReader;
+import com.fasterxml.jackson.databind.node.ArrayNode;
 import io.r2dbc.postgresql.codec.Json;
 import org.springframework.format.datetime.DateFormatter;
 import org.springframework.stereotype.Component;
@@ -205,6 +210,30 @@ public class BotUtil {
 			return botNode.path("logicIDs").get(0).path("adapter").findValue("id").asText();
 		}
 		return "";
+	}
+
+	/**
+	 * Get adapter id from bot json node
+	 * @param botNode
+	 * @return
+	 */
+	public static List<String> getBotNodeTags(JsonNode botNode) {
+		if(botNode.path("tags") != null) {
+			List<String> list = null;
+			try{
+				ArrayNode arrayNode = (ArrayNode) botNode.path("tags");
+				ObjectMapper mapper = new ObjectMapper();
+				ObjectReader reader = mapper.readerFor(new TypeReference<List<String>>() {
+				});
+				// use it
+				list = reader.readValue(arrayNode);
+			} catch (Exception ex) {
+				log.error("Exception in getBotNodeTags: "+ex.getMessage());
+			}
+
+			return list;
+		}
+		return null;
 	}
 
 	/**
