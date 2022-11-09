@@ -28,20 +28,28 @@ public class FileUtil {
 	 * @return
 	 */
 	public static String downloadFileToLocalFromUrl(String urlStr, String mimeType, String name, Double maxSizeForMedia) {
+		byte[] inputBytes = getInputBytesFromUrl(urlStr);
+		if(inputBytes != null) {
+			return fileToLocalFromBytes(inputBytes, mimeType, name);
+		}
+
+		return "";
+	}
+
+	/**
+	 * Get file local path by file url
+	 * @param inputBytes
+	 * @param mimeType
+	 * @param name
+	 * @param maxSizeForMedia
+	 * @return
+	 */
+	public static String fileToLocalFromBytes(byte[] inputBytes, String mimeType, String name) {
 		/* Unique File Name */
 		name = getUploadedFileName(mimeType, name);
 
 		/* File input stream to copy from */
 		try {
-			URL url = new URL(urlStr);
-			byte[] inputBytes = url.openStream().readAllBytes();
-
-			/* Discard if file size is greater than MAX_SIZE_FOR_MEDIA */
-			if (maxSizeForMedia != null && inputBytes.length > maxSizeForMedia) {
-				log.error("file size is greater than limit : " + inputBytes.length);
-				return "";
-			}
-
 			/* Create temp file to copy to */
 			String localPath = "/tmp/";
 			String filePath = localPath + name;
@@ -52,13 +60,28 @@ public class FileUtil {
 			Files.copy(new ByteArrayInputStream(inputBytes), Paths.get(filePath), StandardCopyOption.REPLACE_EXISTING);
 
 			return filePath;
-		} catch (MalformedURLException e) {
-			log.error("MalformedURLException in getFilePathFromUrl : "+e.getMessage());
 		} catch (IOException e) {
 			log.error("IOException in getFilePathFromUrl : "+e.getMessage());
 		}
 
 		return "";
+	}
+
+	/**
+	 * Get input bytes from file url
+	 * @param urlStr
+	 * @return
+	 */
+	public static byte[] getInputBytesFromUrl(String urlStr) {
+		try {
+			URL url = new URL(urlStr);
+			return url.openStream().readAllBytes();
+		} catch (MalformedURLException e) {
+			e.printStackTrace();
+		} catch (IOException e) {
+			log.error("IOException in getInputBytesFromUrl: "+e.getMessage());
+		}
+		return null;
 	}
 
 	/**
@@ -76,6 +99,20 @@ public class FileUtil {
 		name += "." + ext;
 
 		return name;
+	}
+
+	/**
+	 * Validate file input bytes for size
+	 * @param inputBytes
+	 * @param maxSizeForMedia
+	 * @return
+	 */
+	public static String validateFileSizeByInputBytes(byte[] inputBytes, Double maxSizeForMedia) {
+		/* Discard if file size is greater than MAX_SIZE_FOR_MEDIA */
+		if (maxSizeForMedia != null && inputBytes.length > maxSizeForMedia) {
+			return "file size is greater than limit : " + inputBytes.length;
+		}
+		return "";
 	}
 
 	/**
@@ -171,7 +208,6 @@ public class FileUtil {
 	
 	/**
 	 * Get Image file types list
-	 * @param data
 	 * @return
 	 */
 	public static ArrayList<String> getImageFileTypes() {
@@ -185,7 +221,6 @@ public class FileUtil {
 
 	/**
 	 * Get Audio file types list
-	 * @param data
 	 * @return
 	 */
 	public static ArrayList<String> getAudioFileTypes() {
@@ -204,7 +239,6 @@ public class FileUtil {
 	
 	/**
 	 * Get Video file types list
-	 * @param data
 	 * @return
 	 */
 	public static ArrayList<String> getVideoFileTypes() {
@@ -222,7 +256,6 @@ public class FileUtil {
 	
 	/**
 	 * Get Document file types list
-	 * @param data
 	 * @return
 	 */
 	public static ArrayList<String> getDocumentFileTypes() {
