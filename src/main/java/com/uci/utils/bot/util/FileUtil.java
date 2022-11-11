@@ -3,6 +3,7 @@ package com.uci.utils.bot.util;
 import java.io.ByteArrayInputStream;
 import java.io.File;
 import java.io.IOException;
+import java.io.InputStream;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.net.URLConnection;
@@ -41,13 +42,9 @@ public class FileUtil {
 	 * @param inputBytes
 	 * @param mimeType
 	 * @param name
-	 * @param maxSizeForMedia
 	 * @return
 	 */
 	public static String fileToLocalFromBytes(byte[] inputBytes, String mimeType, String name) {
-		/* Unique File Name */
-		name = getUploadedFileName(mimeType, name);
-
 		/* File input stream to copy from */
 		try {
 			/* Create temp file to copy to */
@@ -80,6 +77,15 @@ public class FileUtil {
 			e.printStackTrace();
 		} catch (IOException e) {
 			log.error("IOException in getInputBytesFromUrl: "+e.getMessage());
+		}
+		return null;
+	}
+
+	public static byte[] getInputBytesFromInputStream(InputStream stream) {
+		try {
+			return stream.readAllBytes();
+		} catch (IOException e) {
+			e.printStackTrace();
 		}
 		return null;
 	}

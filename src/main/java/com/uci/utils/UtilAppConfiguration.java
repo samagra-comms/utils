@@ -15,8 +15,6 @@ import org.springframework.web.reactive.function.client.WebClient;
 
 import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
-import com.uci.utils.azure.AzureBlobProperties;
-import com.uci.utils.cdn.samagra.MinioClientProp;
 
 import io.fusionauth.client.FusionAuthClient;
 import io.fusionauth.domain.api.LoginRequest;
@@ -45,36 +43,6 @@ public class UtilAppConfiguration {
 	
 	@Value("${spring.redis.number.port}")
 	private String redisPort;
-    
-    @Value("${cdn.minio.login.id}")
-	private String minioLoginId;
-	
-	@Value("${cdn.minio.password}")
-	private String minioPassword;
-	
-	@Value("${cdn.minio.application.id}")
-	private String minioAppId;
-	
-	@Value("${cdn.minio.bucket.id}")
-	private String minioBucketId;
-	
-	@Value("${cdn.minio.url}")
-	private String minioUrl;
-	
-	@Value("${cdn.minio.fa.key}")
-	private String minioFAKey;
-	
-	@Value("${cdn.minio.fa.url}")
-	private String minioFAUrl;
-	
-	@Value("${spring.azure.blob.store.account.name}")
-	private String azureAccountName;
-	
-	@Value("${spring.azure.blob.store.account.key}")
-	private String azureAccountKey;
-	
-	@Value("${spring.azure.blob.store.container.name}")
-	private String azureContainer;
 	
 	public Caffeine<Object, Object> caffeineCacheBuilder() {
 		return Caffeine.newBuilder()
@@ -115,29 +83,4 @@ public class UtilAppConfiguration {
 	    template.setValueSerializer(new GenericJackson2JsonRedisSerializer());
 	    return template;
 	}
-	
-	@Bean
-	public MinioClientProp getMinioClientProp() {
-		UUID applicationId = null;
-		if(!minioAppId.isEmpty()) {
-			applicationId = UUID.fromString(minioAppId);
-		}	
-		
-		System.out.println("Minio FA key & url :"+minioFAKey+", "+minioFAUrl);
-		return MinioClientProp.builder()
-				.loginRequest(new LoginRequest(applicationId, minioLoginId, minioPassword))
-				.cdnBaseUrl(minioUrl)
-				.bucketId(minioBucketId)
-				.fusionAuth(new FusionAuthClient(minioFAKey, minioFAUrl))
-				.build();
-	}
-    
-    @Bean
-    AzureBlobProperties azureBlobProperties() {
-    	return AzureBlobProperties.builder()
-    			.accountName(azureAccountName)
-			    .accountKey(azureAccountKey)
-    			.container(azureContainer)
-			    .build();
-    }
 }
