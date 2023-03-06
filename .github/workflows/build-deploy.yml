@@ -44,7 +44,7 @@ jobs:
 
 
       - name: Deploy
-        run: mvn clean install -Pgithub deploy
+        run: mvn clean install -Pgithub deploy -Dmaven.wagon.http.ssl.insecure=true -Dmaven.wagon.http.ssl.allowall=true
         env:
           GITHUB_USERNAME: ${{ secrets.USERNAME }}
           GITHUB_TOKEN: ${{ secrets.TOKEN }}
