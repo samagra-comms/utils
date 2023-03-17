@@ -7,7 +7,6 @@ import org.mockito.Mock;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.context.annotation.Bean;
-import org.springframework.context.annotation.Configuration;
 import org.springframework.web.reactive.function.client.WebClient;
 
 public class UtilsTestConfig {
@@ -15,11 +14,6 @@ public class UtilsTestConfig {
     @Bean
     public UserService getUserService(){
         return new UserService();
-    }
-
-    @Bean
-    public CampaignService getCampaignService(){
-        return new CampaignService(webClient, fusionAuthClient, null);
     }
 
     @Bean
