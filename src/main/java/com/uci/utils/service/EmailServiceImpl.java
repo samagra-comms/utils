@@ -18,6 +18,8 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.Arrays;
+import java.util.Map;
 
 @Service
 @Slf4j
@@ -45,9 +47,12 @@ public class EmailServiceImpl implements EmailService {
     public void sendMailWithAttachment(EmailDetails details) {
         MimeMessage mimeMessage = javaMailSender.createMimeMessage();
         MimeMessageHelper mimeMessageHelper;
-        String tempPath = "/tmp/" + details.getAttachmentFileName();
+        String tempPath = "/tmp/email/";
         File file = new File(tempPath);
         try {
+            if (!file.exists()) {
+                file.mkdirs();
+            }
             mimeMessageHelper = new MimeMessageHelper(mimeMessage, true);
             mimeMessageHelper.setFrom(sender);
             if (details.getRecipient().contains(",")) {
@@ -58,17 +63,13 @@ public class EmailServiceImpl implements EmailService {
             }
             mimeMessageHelper.setText(details.getMsgBody());
             mimeMessageHelper.setSubject(details.getSubject());
-            createTempFile(details.getAttachment(), tempPath);
-            FileSystemResource fileSystemResource = new FileSystemResource(file);
-            mimeMessageHelper.addAttachment(fileSystemResource.getFilename(), file);
+            addAttachments(mimeMessageHelper, details, file.getPath());
             javaMailSender.send(mimeMessage);
             log.info("Mail sent Successfully...");
         } catch (Exception e) {
             log.error("Error while sending mail!!! " + e.getMessage());
         } finally {
-            if (file.exists() && file.delete()) {
-                log.info("file deleted : " + file.getPath());
-            }
+            deleteFiles(file);
         }
     }
 
@@ -87,5 +88,39 @@ public class EmailServiceImpl implements EmailService {
         Path path = Paths.get(filePath);
         Files.writeString(path, fileData, StandardCharsets.UTF_8);
         log.info("Email attachment temp file is created : " + filePath);
+    }
+
+    private void addAttachments(MimeMessageHelper mimeMessageHelper, EmailDetails emailDetails, String rootPath) {
+        try {
+            if (emailDetails != null && emailDetails.getAttachments() != null) {
+                Map<String, String> attachmentMap = emailDetails.getAttachments();
+                for (String fileName : attachmentMap.keySet()) {
+                    File file = new File(rootPath + File.separator + fileName + ".txt");
+                    String fileData = attachmentMap.get(fileName);
+                    createTempFile(fileData, file.getPath());
+                    FileSystemResource fileSystemResource = new FileSystemResource(file);
+                    mimeMessageHelper.addAttachment(fileSystemResource.getFilename(), file);
+                }
+            } else if (emailDetails != null && emailDetails.getAttachment() != null) {
+                File file = new File(rootPath + File.separator + emailDetails.getAttachmentFileName() + ".txt");
+                createTempFile(emailDetails.getAttachment(), file.getPath());
+                FileSystemResource fileSystemResource = new FileSystemResource(file);
+                mimeMessageHelper.addAttachment(fileSystemResource.getFilename(), file);
+            } else {
+                log.error("No Attachment in Email...");
+            }
+        } catch (Exception ex) {
+            log.error("An error occured : " + ex.getMessage());
+        }
+    }
+
+    public static void deleteFiles(File dirPath) {
+        File filesList[] = dirPath.listFiles();
+        for (File file : filesList) {
+            if (file.isFile()) {
+                log.info("Attachments deleted : " + file.getPath());
+                file.delete();
+            }
+        }
     }
 }

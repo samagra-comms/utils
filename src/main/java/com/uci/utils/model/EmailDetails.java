@@ -2,6 +2,8 @@ package com.uci.utils.model;
 
 import lombok.*;
 
+import java.util.Map;
+
 @Data
 @AllArgsConstructor
 @NoArgsConstructor
@@ -13,4 +15,5 @@ public class EmailDetails {
     private String subject;
     private String attachment;
     private String attachmentFileName;
+    private Map<String, String> attachments;
 }
