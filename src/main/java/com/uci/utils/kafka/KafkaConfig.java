@@ -9,6 +9,8 @@ import org.apache.kafka.clients.admin.DescribeClusterOptions;
 import org.apache.kafka.clients.admin.DescribeClusterResult;
 import org.apache.kafka.clients.admin.ListTopicsOptions;
 import org.apache.kafka.clients.admin.ListTopicsResult;
+
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.actuate.health.Health;
 import org.springframework.boot.actuate.health.HealthIndicator;
@@ -19,10 +21,12 @@ import org.springframework.context.annotation.Configuration;
 public class KafkaConfig {
 	@Value("${spring.kafka.bootstrap-servers}")
 	String kafkaServerUrl;
+
+	@Autowired
+	private AdminClient adminClient;
 	
 	/** 
 	 * Set kafka admin client with kafka properties 
-	 *
 	 * Returns AdminClient
 	 */
 	@Bean
@@ -36,17 +40,14 @@ public class KafkaConfig {
 
 	/** 
 	 * Bean for Kafka health indicator, set health up/down of kafka server
-	 * @param server - kafka server url
-	 * 
 	 * @return kafka health indicator
 	 */
 	@Bean
 	public HealthIndicator kafkaHealthIndicator() {
 		final DescribeClusterOptions describeClusterOptions = new DescribeClusterOptions().timeoutMs(1000);
-		final AdminClient adminClient = kafkaAdminClient();
 		return () -> {
-			final DescribeClusterResult describeCluster = adminClient.describeCluster(describeClusterOptions);
 			try {
+				final DescribeClusterResult describeCluster = adminClient.describeCluster(describeClusterOptions);
 				final String clusterId = describeCluster.clusterId().get();
 				final int nodeCount = describeCluster.nodes().get().size();
 				ListTopicsOptions options = new ListTopicsOptions();
@@ -58,7 +59,7 @@ public class KafkaConfig {
 				return Health.up()
 						.withDetail("clusterId", clusterId)
 						.withDetail("nodeCount", nodeCount)
-						.withDetail("topicsExists", currentTopicCount > 0 ? true : false)
+						.withDetail("topicsExists", currentTopicCount > 0)
 						.build();
 			} catch (InterruptedException | ExecutionException e) {
 				return Health.down()
