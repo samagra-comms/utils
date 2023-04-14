@@ -63,7 +63,7 @@ public class KafkaConfig {
 						.build();
 			} catch (InterruptedException | ExecutionException e) {
 				return Health.down()
-						.withException(e)
+						.withDetail("error", e.getMessage())
 						.build();
 			}
 		};
