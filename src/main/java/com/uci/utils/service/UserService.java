@@ -231,9 +231,13 @@ public class UserService {
 		return usersList;
 	}
 
-	public JSONArray getUsersFromFederatedServers(String campaignID) {
-
-		String baseURL = CAMPAIGN_URL + "/admin/bot/getAllUsers/" + campaignID;
+	public JSONArray getUsersFromFederatedServers(String campaignID, String page) {
+		String baseURL = null;
+		if(page != null) {
+			baseURL = CAMPAIGN_URL + "/admin/bot/getAllUsers/" + campaignID + "/" + page;
+		} else {
+			baseURL = CAMPAIGN_URL + "/admin/bot/getAllUsers/" + campaignID;
+		}
 		OkHttpClient client = new OkHttpClient().newBuilder().connectTimeout(90, TimeUnit.SECONDS)
 				.writeTimeout(90, TimeUnit.SECONDS).readTimeout(90, TimeUnit.SECONDS).build();
 		MediaType mediaType = MediaType.parse("application/json");
