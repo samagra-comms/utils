@@ -97,7 +97,11 @@ public class UtilAppConfiguration {
 	public JavaMailSender getJavaMailSender() {
 		JavaMailSenderImpl mailSender = new JavaMailSenderImpl();
 		mailSender.setHost(mailHost);
-		mailSender.setPort(Integer.parseInt(mailPort));
+		if(mailPort != null && !mailPort.isEmpty()){
+			mailSender.setPort(Integer.parseInt(mailPort));
+		} else {
+			mailSender.setPort(587);
+		}
 		mailSender.setUsername(mailUsername);
 		mailSender.setPassword(mailPassword);
 
