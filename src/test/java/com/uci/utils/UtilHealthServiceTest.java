@@ -1,31 +1,35 @@
 package com.uci.utils;
 
 import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.uci.utils.kafka.KafkaConfig;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.Test;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
 import org.mockito.Mockito;
 
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.actuate.health.Health;
+import org.springframework.boot.actuate.health.Status;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.test.mock.mockito.MockBean;
 
-import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 
 @SpringBootTest(classes = UtilsTestConfig.class)
 class UtilHealthServiceTest {
 
-	@Autowired
-	UtilHealthService utilHealthService;
-
-	@MockBean
+	@Mock
 	KafkaConfig kafkaConfig;
 
-	@MockBean
+	@Mock
 	BotService botService;
+
+	@Mock
+	ObjectMapper mapper;
+
+	@InjectMocks
+	UtilHealthService utilHealthService;
 
 	@AfterAll
 	static void teardown() {
@@ -34,17 +38,19 @@ class UtilHealthServiceTest {
 
 	@Test
 	void getKafkaHealthNode() {
+		Mockito.when(mapper.createObjectNode()).thenReturn(new ObjectMapper().createObjectNode());
 		Mockito.when(kafkaConfig.kafkaHealthIndicator()).thenReturn(() -> Health.up().build());
 		JsonNode result = utilHealthService.getKafkaHealthNode().block();
 		assertNotNull(result);
-		assertTrue(result.get("healthy").asBoolean());
+		assertEquals(result.get("status").textValue(), Status.UP.getCode());
 	}
 
 	@Test
 	void getCampaignUrlHealthNode() {
+		Mockito.when(mapper.createObjectNode()).thenReturn(new ObjectMapper().createObjectNode());
 		utilHealthService.campaignUrl = "NON_EXISTENT_URL";
 		JsonNode result = utilHealthService.getCampaignUrlHealthNode().block();
 		assertNotNull(result);
-		assertFalse(result.get("healthy").asBoolean());
+		assertEquals(result.get("status").textValue(), Status.DOWN.getCode());
 	}
 }
