@@ -38,7 +38,7 @@ public class UtilAppConfiguration {
 	@Value("${spring.redis.db}")
 	private String redisDb;
 	
-	@Value("${spring.redis.host}")
+	@Value("${spring.data.redis.host}")
 	private String redisHost;
 	
 	@Value("${spring.redis.number.port}")

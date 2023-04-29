@@ -6,7 +6,7 @@
 	<parent>
 		<groupId>org.springframework.boot</groupId>
 		<artifactId>spring-boot-starter-parent</artifactId>
-		<version>2.5.7</version>
+		<version>3.0.0</version>
 		<relativePath /> <!-- lookup parent from repository -->
 	</parent>
 	<groupId>com.uci</groupId>
@@ -17,7 +17,7 @@
 	<name>utils</name>
 	<description>Demo project for Spring Boot</description>
 	<properties>
-		<java.version>11</java.version>
+		<java.version>17</java.version>
 		<mockwebserver.version>4.7.2</mockwebserver.version>
 		<okhttp3.version>4.7.2</okhttp3.version>
 	</properties>
@@ -87,7 +87,7 @@
 		<dependency>
 			<groupId>org.projectlombok</groupId>
 			<artifactId>lombok</artifactId>
-			<version>1.18.12</version>
+			<version>1.18.22</version>
 		</dependency>
 		<dependency>
 			<groupId>org.apache.commons</groupId>
@@ -117,6 +117,7 @@
 		<dependency>
 			<groupId>io.r2dbc</groupId>
 			<artifactId>r2dbc-postgresql</artifactId>
+			<version>0.8.12.RELEASE</version>
 		</dependency>
 		<dependency>
 			<groupId>org.springframework.data</groupId>
@@ -207,6 +208,18 @@
 			<groupId>com.azure</groupId>
 			<artifactId>azure-storage-blob</artifactId>
 			<version>12.14.4</version>
+		</dependency>
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-properties-migrator</artifactId>
+			<version>3.0.3</version>
+			<scope>runtime</scope>
+		</dependency>
+		<!-- https://mvnrepository.com/artifact/jakarta.validation/jakarta.validation-api -->
+		<dependency>
+			<groupId>jakarta.validation</groupId>
+			<artifactId>jakarta.validation-api</artifactId>
+			<version>3.0.2</version>
 		</dependency>
 		<!-- Azure Dependencies - End -->
 	</dependencies>
