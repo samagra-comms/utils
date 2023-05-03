@@ -31,6 +31,9 @@ import reactor.util.function.Tuple2;
 public class UtilHealthService {
 	@Value("${campaign.url}")
 	String campaignUrl;
+
+	@Value("${campaign.admin.token}")
+	String campaignAdminToken;
 	
 	@Autowired
 	private KafkaConfig kafkaConfig;
@@ -68,18 +71,22 @@ public class UtilHealthService {
 		try {
 			WebClient webClient = WebClient.create(campaignUrl);
 			return webClient.get()
-					.uri(builder -> builder.path("admin/v1/health").build())
+					.uri(builder -> builder.path("admin/health/ping").build())
+					.header("admin-token", campaignAdminToken)
 					.retrieve()
 					.bodyToMono(JsonNode.class)
 					.onErrorResume(e -> {
 						failed.put("message", e.getMessage());
-						return Mono.just(mapper.createObjectNode().set("result", failed));
+						return Mono.just(failed);
 					})
 					.map(jsonNode -> {
 						ObjectNode result = mapper.createObjectNode();
-						result.put("status", jsonNode.get("result").get("status").textValue());
-						if (jsonNode.get("result").get("status").textValue().equals(Status.DOWN.getCode())) {
-							result.set("message", jsonNode.get("result").get("message"));
+						if (jsonNode.get("status").textValue().equalsIgnoreCase("ok")) {
+							result.put("status", jsonNode.get("details").get("UCI-API").get("status").textValue().equalsIgnoreCase(Status.UP.getCode()) ? "UP" : "DOWN");
+						}
+						else {
+							result.put("status", "DOWN");
+							result.set("message", jsonNode.get("message"));
 						}
 						return result;
 					});
