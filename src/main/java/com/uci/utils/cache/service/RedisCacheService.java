@@ -23,7 +23,6 @@ import java.util.concurrent.TimeUnit;
 @Service
 @Getter
 @Setter
-@AllArgsConstructor
 @Slf4j
 public class RedisCacheService {
 	private RedisTemplate<String, Object> redisTemplate;
