@@ -22,6 +22,7 @@ import java.util.concurrent.TimeUnit;
 
 @Service
 @Getter
+@AllArgsConstructor
 @Setter
 @Slf4j
 public class RedisCacheService {
