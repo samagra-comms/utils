@@ -5,7 +5,10 @@ import java.util.function.Function;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.actuate.health.Health;
 import org.springframework.boot.actuate.health.HealthIndicator;
+import org.springframework.boot.actuate.health.Status;
+import org.springframework.context.annotation.Import;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
@@ -13,6 +16,7 @@ import org.springframework.web.reactive.function.client.WebClient;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.uci.utils.kafka.KafkaConfig;
 
@@ -27,12 +31,18 @@ import reactor.util.function.Tuple2;
 public class UtilHealthService {
 	@Value("${campaign.url}")
 	String campaignUrl;
+
+	@Value("${campaign.admin.token}")
+	String campaignAdminToken;
 	
 	@Autowired
 	private KafkaConfig kafkaConfig;
 	
 	@Autowired
 	private BotService botService;
+
+	@Autowired
+	private ObjectMapper mapper;
 	
 	/**
 	 * Returns kafka health node with kafka health & details
@@ -41,20 +51,13 @@ public class UtilHealthService {
 	 */
 	public Mono<JsonNode> getKafkaHealthNode() {
 		return Mono.fromCallable(() -> {
-			HealthIndicator kafkaHealthIndicator = kafkaConfig.kafkaHealthIndicator();
-			Boolean kafkaHealthy = getIsKafkaHealthy(kafkaHealthIndicator);
-
-			/* Result node */
-			ObjectMapper mapper = new ObjectMapper();
-			JsonNode jsonNode = mapper.readTree("{\"healthy\":false}");
-
-			/* Add data in result node */
-			((ObjectNode) jsonNode).put("healthy", kafkaHealthy);
-			if(kafkaHealthy) {
-				JsonNode kafkaDetailNode = getKafkaHealthDetailsNode(kafkaHealthIndicator);
-				((ObjectNode) jsonNode).set("details", kafkaDetailNode);
+			Health kafkaHealth = kafkaConfig.kafkaHealthIndicator().getHealth(true);
+			ObjectNode result = mapper.createObjectNode();
+			result.put("status", kafkaHealth.getStatus().toString());
+			if (kafkaHealth.getStatus().equals(Status.DOWN)) {
+				result.put("message", kafkaHealth.getDetails().get("error").toString());
 			}
-			return jsonNode;
+			return result;
 		});
 	}
 	
@@ -64,43 +67,60 @@ public class UtilHealthService {
 	 * @return Mono<JsonNode>
 	 */
 	public Mono<JsonNode> getCampaignUrlHealthNode() {
-		return getIsCampaignHealthy();
+		ObjectNode failed = mapper.createObjectNode().put("status", Status.DOWN.getCode());
+		try {
+			WebClient webClient = WebClient.create(campaignUrl);
+			return webClient.get()
+					.uri(builder -> builder.path("admin/health/ping").build())
+					.header("admin-token", campaignAdminToken)
+					.retrieve()
+					.bodyToMono(JsonNode.class)
+					.onErrorResume(e -> {
+						failed.put("message", e.getMessage());
+						return Mono.just(failed);
+					})
+					.map(jsonNode -> {
+						ObjectNode result = mapper.createObjectNode();
+						if (jsonNode.get("status").textValue().equalsIgnoreCase("ok")) {
+							result.put("status", jsonNode.get("details").get("UCI-API").get("status").textValue().equalsIgnoreCase(Status.UP.getCode()) ? "UP" : "DOWN");
+						}
+						else {
+							result.put("status", "DOWN");
+							result.set("message", jsonNode.get("message"));
+						}
+						return result;
+					});
+		} catch (Exception e) {
+			log.info(e.getMessage());
+			failed.put("message", e.getMessage());
+			return Mono.just(failed);
+		}
 	}
 
 	/**
 	 * Returns the combined health of kafka and campaign.
 	 *
-	 * @return Returns details of each service in `checks` key and
-	 * the overall health status in `healthy` key.
+	 * @return Returns details of each service in `details` key and
+	 * the overall health status in `status` key.
 	 */
 	public Mono<JsonNode> getAllHealthNode() {
-		ObjectMapper mapper = new ObjectMapper();
 		ObjectNode resultNode = mapper.createObjectNode();
 
 		/* Kafka health info */
-		Mono<JsonNode> kafkaNode = getKafkaHealthNode().map(result -> {
-			ObjectNode objectNode = mapper.createObjectNode();
-			objectNode.put("name", "Kafka");
-			objectNode.set("healthy", result.get("healthy"));
-			objectNode.set("details", result.get("details"));
-			return  objectNode;
-		});
+		Mono<JsonNode> kafkaNode = getKafkaHealthNode();
 
 		/* Campaign health info. */
-		Mono<JsonNode> campaignNode = getCampaignUrlHealthNode().map(result -> {
-			ObjectNode objectNode = mapper.createObjectNode();
-			objectNode.put("name", "campaign");
-			objectNode.set("healthy", result.get("healthy"));
-			return  objectNode;
-		});
+		Mono<JsonNode> campaignNode = getCampaignUrlHealthNode();
 
 		return Mono.zip(kafkaNode, campaignNode).map(results -> {
-			resultNode.putArray("checks")
-					.add(results.getT1())
-					.add(results.getT2());
-			resultNode.put("healthy",
-					results.getT1().get("healthy").booleanValue() &&
-					results.getT2().get("healthy").booleanValue()
+			ObjectNode detailsNode = mapper.createObjectNode();
+			detailsNode.set("kafka", results.getT1());
+			detailsNode.set("campaign", results.getT2());
+			resultNode.set("details", detailsNode);
+			resultNode.put("status",
+					results.getT1().get("status").textValue().equals(Status.UP.getCode()) &&
+					results.getT2().get("status").textValue().equals(Status.UP.getCode())
+					? Status.UP.getCode() : Status.DOWN.getCode()
 			);
 			return resultNode;
 		});
@@ -123,36 +143,4 @@ public class UtilHealthService {
         
         return kafkaDetailNode;
 	}
-	
-	/**
-	 * Returns kafka health in boolean
-	 * 
-	 * @param kafkaHealthIndicator
-	 * @return Boolean
-	 */
-	private Boolean getIsKafkaHealthy(HealthIndicator kafkaHealthIndicator) {
-		return kafkaHealthIndicator.getHealth(true).getStatus().toString().equals("UP");
-	}
-	
-	/**
-	 * Get is campaign url healthy or not
-	 * 
-	 * @return Boolean
-	 */
-	private Mono<JsonNode> getIsCampaignHealthy() {
-    	ObjectMapper mapper = new ObjectMapper();
-		JsonNode failed = mapper.createObjectNode().put("healthy", "false");
-    	try {
-	    	WebClient webClient = WebClient.create(campaignUrl);
-			return webClient.get()
-	    			.uri(builder -> builder.path("admin/v1/health").build())
-	    			.retrieve()
-	                .bodyToMono(JsonNode.class)
-					.onErrorResume(e -> Mono.just(mapper.createObjectNode().set("result", failed)))
-					.map(jsonNode -> mapper.createObjectNode().set("healthy", jsonNode.path("result").get("healthy")));
-		} catch (Exception e) {
-			log.info(e.getMessage());
-			return Mono.just(failed);
-		}
-    }
 }
