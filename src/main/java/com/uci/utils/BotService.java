@@ -315,6 +315,7 @@ public class BotService {
 						}).retrieve().bodyToMono(String.class).map(new Function<String, JsonNode>() {
 							@Override
 							public JsonNode apply(String response) {
+								log.info("Call getAdapterByID cache key : "+ cacheKey + " cache data : "+cache.getIfPresent(cacheKey));
 								if (response != null) {
 									ObjectMapper mapper = new ObjectMapper();
 									try {
@@ -423,6 +424,7 @@ public class BotService {
 							httpHeaders.set("admin-token", adminToken);
 						})
 						.retrieve().bodyToMono(String.class).map(response -> {
+							log.info("Call getVaultCredentials cache key : "+ cacheKey +" cache data : " + cache.getIfPresent(cacheKey));
 							if (response != null) {
 								ObjectMapper mapper = new ObjectMapper();
 								try {
