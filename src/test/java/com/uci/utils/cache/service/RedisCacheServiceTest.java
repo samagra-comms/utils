@@ -24,7 +24,7 @@ class RedisCacheServiceTest {
     @BeforeEach
     void init(){
         RedisTemplate<String, Object> obj = new RedisTemplate<>();
-        redisCacheService = Mockito.spy(new RedisCacheService());
+        redisCacheService = Mockito.spy(new RedisCacheService(obj));
         Mockito.doReturn(obj).when(redisCacheService).getCache(anyString());
         Mockito.doNothing().when(redisCacheService).setCache(anyString(), Mockito.any());
         Mockito.doNothing().when(redisCacheService).deleteCache(anyString());
