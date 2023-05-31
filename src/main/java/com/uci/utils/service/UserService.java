@@ -232,6 +232,7 @@ public class UserService {
 	}
 
 	public JSONArray getUsersFromFederatedServers(String campaignID, String page) {
+		log.info("UserService:getUsersFromFederatedServers::Calling botId: "+ campaignID + " Page: "+page);
 		String baseURL = null;
 		if(page != null) {
 			baseURL = CAMPAIGN_URL + "/admin/bot/getAllUsers/" + campaignID + "/" + page;
@@ -248,12 +249,13 @@ public class UserService {
 			Response response = client.newCall(request).execute();
 			return (new JSONObject(response.body().string())).getJSONArray("result");
 		} catch (Exception e) {
-			e.printStackTrace();
+			log.error("Error:getUsersFromFederatedServers::Exception: "+e.getMessage());
 		}
 		return null;
 	}
 
 	public ArrayList<JSONObject> getUsersMessageByTemplate(ObjectNode jsonData) {
+		log.info("UserService:getUsersMessageByTemplate::CallingTemplaterService");
 		String baseURL = baseUrlTemplate + "/process/testMany";
 		OkHttpClient client = new OkHttpClient().newBuilder().connectTimeout(90, TimeUnit.SECONDS)
 				.writeTimeout(90, TimeUnit.SECONDS).readTimeout(90, TimeUnit.SECONDS).build();
@@ -277,7 +279,7 @@ public class UserService {
 			}
   			return usersMessage;
   		} catch (IOException e) {
-  			e.printStackTrace();
+  			log.error("Error:getUsersMessageByTemplate::Exception: "+e.getMessage());
   		}
   		return null;
     }

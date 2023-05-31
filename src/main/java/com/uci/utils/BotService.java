@@ -95,6 +95,7 @@ public class BotService {
 	 */
 	public Mono<JsonNode> getBotNodeFromName(String botName) {
 		String cacheKey = "bot-for-name:" + botName;
+		log.info("BotService::getBotNodeFromName::fetchingBotData : "+botName);
 		return CacheMono.lookup(key -> Mono.justOrEmpty(cache.getIfPresent(cacheKey) != null ? (JsonNode) cache.getIfPresent(key) : null)
 					.map(Signal::next), cacheKey)
 				.onCacheMissResume(() -> webClient.get()
@@ -106,7 +107,7 @@ public class BotService {
 												.build())
 						.retrieve().bodyToMono(String.class).map(response -> {
 							if (response != null) {
-								log.info("Call getBotNodeFromName : " + response + " cache : " + cache.getIfPresent(cacheKey));
+								log.info("BotService:getBotNodeFromName::Got Data from UCI Api: " + response + " cache : " + cache.getIfPresent(cacheKey));
 								try {
 									ObjectMapper mapper = new ObjectMapper();
 									JsonNode root = mapper.readTree(response);
@@ -122,7 +123,7 @@ public class BotService {
 								return new ObjectMapper().createObjectNode();
 							}
 						})
-						.doOnError(throwable -> log.info("Error in getting campaign: " + throwable.getMessage()))
+						.doOnError(throwable -> log.info("Error::getBotNodeFromName in getting campaign: " + throwable.getMessage()))
 						.onErrorReturn(new ObjectMapper().createObjectNode())
 						)
 				.andWriteWith((key, signal) -> Mono.fromRunnable(
@@ -217,6 +218,7 @@ public class BotService {
 	 */
 	public Mono<String> getBotIdFromBotName(String botName) {
 		String cacheKey = "Bot-id-for-bot-name: " + botName;
+		log.info("BotService::getBotIdFromBotName::calling from update user: "+botName);
 		return CacheMono.lookup(key -> Mono.justOrEmpty(cache.getIfPresent(cacheKey) != null ? cache.getIfPresent(key).toString() : null)
 					.map(Signal::next), cacheKey)
 				.onCacheMissResume(() -> webClient.get().uri(builder -> builder.path("admin/bot/search/internal")
@@ -229,7 +231,7 @@ public class BotService {
 							@Override
 							public String apply(String response) {
 								if (response != null) {
-									log.info("Call getBotIdFromBotName : " + response + " cache : " + cache.getIfPresent(cacheKey));
+									log.info("BotService:getBotIdFromBotName::Got Data From UCI Api : " + response + " cache : " + cache.getIfPresent(cacheKey));
 									ObjectMapper mapper = new ObjectMapper();
 									try {
 										JsonNode root = mapper.readTree(response);
@@ -240,6 +242,7 @@ public class BotService {
 										}
 										return null;
 									} catch (JsonProcessingException jsonMappingException) {
+										log.error("Error while parsing data from json : "+jsonMappingException.getMessage());
 										return null;
 									}
 				
@@ -248,7 +251,7 @@ public class BotService {
 								return null;
 							}
 						})
-						.doOnError(throwable -> log.info("Error in getting bot: " + throwable.getMessage()))
+						.doOnError(throwable -> log.info("BotService:getBotIdFromBotName::Exception: " + throwable.getMessage()))
 						.onErrorReturn(""))
 				.andWriteWith((key, signal) -> Mono.fromRunnable(
 						() -> Optional.ofNullable(signal.get()).ifPresent(value -> cache.put(key, value))))
@@ -262,39 +265,43 @@ public class BotService {
 	 * @return
 	 */
 	public Mono<Pair<Boolean, String>> updateUser(String userID, String botName) {
-		return getBotIdFromBotName(botName).doOnError(e -> log.error(e.getMessage()))
+		log.info("BotService:updateUser::Calling UCI Api: UserId: " + userID + " botName: " + botName);
+		return getBotIdFromBotName(botName).doOnError(e -> log.error("BotService:updateUser::Calling UCI Api:Exception: " + e.getMessage()))
 				.flatMap(new Function<String, Mono<Pair<Boolean, String>>>() {
 					@Override
 					public Mono<Pair<Boolean, String>> apply(String botID) {
+						log.info("BotService:updateUser::Calling add user on UCI Api:botId: "+botID);
 //						WebClient webClient2 = WebClient.builder().baseUrl(System.getenv("CAMPAIGN_URL_V1")).defaultHeader("admin-token", System.getenv("CAMPAIGN_ADMIN_TOKEN_V1")).build();
 						return webClient.get().uri(new Function<UriBuilder, URI>() {
-							@Override
-							public URI apply(UriBuilder builder) {
-								String base = String.format("/admin/bot/%s/addUser/%s", botID, userID);
-								URI uri = builder.path(base).build();
-								return uri;
-							}
-						}).retrieve().bodyToMono(String.class).map(response -> {
-							if (response != null) {
-								ObjectMapper mapper = new ObjectMapper();
-								try {
-									JsonNode root = mapper.readTree(response);
-									String responseCode = root.path("responseCode").asText();
-									if (root.path("result") != null && root.path("result").path("status") != null
-											&& (root.path("result").path("status").asText().equalsIgnoreCase("USER_ADDED")
-												|| root.path("result").path("status").asText().equalsIgnoreCase("USER_EXISTS"))
-									) {
-										String userID = root.path("result").path("userId").asText();
-										return Pair.of(true, userID);
+									@Override
+									public URI apply(UriBuilder builder) {
+										String base = String.format("/admin/bot/%s/addUser/%s", botID, userID);
+										URI uri = builder.path(base).build();
+										return uri;
 									}
-									return Pair.of(false, "");
-								} catch (JsonProcessingException jsonMappingException) {
-									return Pair.of(false, "");
-								}
-							} else {
-								return Pair.of(false, "");
-							}
-						}).doOnError(throwable -> log.info("Error in updating user: " + throwable.getMessage()))
+								}).retrieve().bodyToMono(String.class).map(response -> {
+									if (response != null) {
+										log.info("BotService:updateUser::user added FA successfully: "+response.toString());
+										ObjectMapper mapper = new ObjectMapper();
+										try {
+											JsonNode root = mapper.readTree(response);
+											String responseCode = root.path("responseCode").asText();
+											if (root.path("result") != null && root.path("result").path("status") != null
+													&& (root.path("result").path("status").asText().equalsIgnoreCase("USER_ADDED")
+													|| root.path("result").path("status").asText().equalsIgnoreCase("USER_EXISTS"))
+											) {
+												String userID = root.path("result").path("userId").asText();
+												return Pair.of(true, userID);
+											}
+											return Pair.of(false, "");
+										} catch (JsonProcessingException jsonMappingException) {
+											return Pair.of(false, "");
+										}
+									} else {
+										log.error("BotService:updateUser::addUser: UCI Api returned null response");
+										return Pair.of(false, "");
+									}
+								}).doOnError(throwable -> log.error("BotService:updateUser::addUser:Exception occured while calling uci api: " + throwable.getMessage()))
 								.onErrorReturn(Pair.of(false, ""));
 					}
 				});
@@ -307,6 +314,7 @@ public class BotService {
 	 */
 	public Mono<JsonNode> getAdapterByID(String adapterID) {
 		String cacheKey = "adapter-by-id: " + adapterID;
+		log.info("BotService:getAdapterByID::Calling get adapter by id from uci api: "+adapterID);
 		return CacheMono.lookup(key -> Mono.justOrEmpty(cache.getIfPresent(cacheKey) != null ? (JsonNode) cache.getIfPresent(key) : null)
 						.map(Signal::next), cacheKey)
 				.onCacheMissResume(() -> webClient.get().uri(new Function<UriBuilder, URI>() {
@@ -318,7 +326,7 @@ public class BotService {
 						}).retrieve().bodyToMono(String.class).map(new Function<String, JsonNode>() {
 							@Override
 							public JsonNode apply(String response) {
-								log.info("Call getAdapterByID cache key : "+ cacheKey + " cache data : "+cache.getIfPresent(cacheKey));
+								log.info("BotService:getAdapterByID::Got Data From UCI Api : cache key : "+ cacheKey + " cache data : "+cache.getIfPresent(cacheKey));
 								if (response != null) {
 									ObjectMapper mapper = new ObjectMapper();
 									try {
@@ -336,7 +344,7 @@ public class BotService {
 								return null;
 							}
 						})
-						.doOnError(throwable -> log.info("Error in getting bot: " + throwable.getMessage()))
+						.doOnError(throwable -> log.error("BotService:getAdapterByID::Exception: " + throwable.getMessage()))
 						.onErrorReturn(null))
 				.andWriteWith((key, signal) -> Mono.fromRunnable(
 						() -> Optional.ofNullable(signal.get()).ifPresent(value -> cache.put(key, value))))
@@ -417,6 +425,7 @@ public class BotService {
 		}
 		WebClient webClient = WebClient.builder().baseUrl(System.getenv("VAULT_SERVICE_URL")).build();
 		String cacheKey = "adapter-credentials-by-id: " + secretKey;
+		log.info("BotService:getVaultCredentials::Calling get vault credentials from uci api: "+secretKey);
 		return CacheMono.lookup(key -> Mono.justOrEmpty(cache.getIfPresent(cacheKey) != null ? (JsonNode) cache.getIfPresent(key) : null)
 						.map(Signal::next), cacheKey)
 				.onCacheMissResume(() -> webClient.get()
@@ -427,7 +436,7 @@ public class BotService {
 							httpHeaders.set("admin-token", adminToken);
 						})
 						.retrieve().bodyToMono(String.class).map(response -> {
-							log.info("Call getVaultCredentials cache key : "+ cacheKey +" cache data : " + cache.getIfPresent(cacheKey));
+							log.info("BotService:getVaultCredentials::Got Data From UCI Api : cache key : "+ cacheKey +" cache data : " + cache.getIfPresent(cacheKey));
 							if (response != null) {
 								ObjectMapper mapper = new ObjectMapper();
 								try {
@@ -442,7 +451,7 @@ public class BotService {
 								}
 							}
 							return null;
-						}).doOnError(throwable -> log.info("Error in getting bot: " + throwable.getMessage())).onErrorReturn(null))
+						}).doOnError(throwable -> log.error("BotService:getVaultCredentials::Exception: " + throwable.getMessage())).onErrorReturn(null))
 				.andWriteWith((key, signal) -> Mono.fromRunnable(
 						() -> Optional.ofNullable(signal.get()).ifPresent(value -> cache.put(key, value))))
 				.log("cache");
