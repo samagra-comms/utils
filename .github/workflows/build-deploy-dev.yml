@@ -36,7 +36,7 @@ jobs:
       - name: Extract version from pom.xml
         id: version
         run: |
-          echo ::set-output name=VERSION::$(grep -A 1 '<artifactId>outbound</artifactId>' pom.xml | grep -oP '(?<=<version>).*?(?=</version>)')
+          echo ::set-output name=VERSION::$(grep -A 1 '<artifactId>utils</artifactId>' pom.xml | grep -oP '(?<=<version>).*?(?=</version>)')
 
       - name: Delete package specific version
         uses: smartsquaregmbh/delete-old-packages@v0.4.0
