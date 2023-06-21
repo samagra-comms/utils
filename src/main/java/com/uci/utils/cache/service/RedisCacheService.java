@@ -6,10 +6,7 @@ import com.fasterxml.jackson.databind.ObjectWriter;
 import com.uci.utils.cache.RedisCachePrefix;
 import org.apache.commons.lang3.tuple.Pair;
 import org.springframework.data.redis.connection.RedisConnection;
-import org.springframework.data.redis.core.HashOperations;
-import org.springframework.data.redis.core.ListOperations;
-import org.springframework.data.redis.core.RedisTemplate;
-import org.springframework.data.redis.core.ValueOperations;
+import org.springframework.data.redis.core.*;
 import org.springframework.stereotype.Service;
 
 import lombok.AllArgsConstructor;
@@ -273,5 +270,15 @@ public class RedisCacheService {
      */
     private Integer getExpireTimeInSeconds() {
         return 3600; //60*60 = 1 Hour
+    }
+
+    /**
+     * Check isKeyExists in Cache
+     * @param key
+     * @return
+     */
+    public boolean isKeyExists(String key) {
+        RedisOperations<String, Object> operations = redisTemplate.opsForValue().getOperations();
+        return operations.hasKey(key);
     }
 }
