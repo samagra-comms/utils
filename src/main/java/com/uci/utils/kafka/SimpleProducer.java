@@ -28,12 +28,12 @@ public class SimpleProducer {
                 .addCallback(new ListenableFutureCallback<SendResult<String, String>>() {
                     @Override
                     public void onFailure(@NotNull Throwable throwable) {
-                        log.error("Unable to push {} to {} topic due to {}", message, topic, throwable.getMessage());
+                        log.error("Kafka::Send:Exception: Unable to push topic {} message {} due to {}", topic, message, throwable.getMessage());
                     }
 
                     @Override
                     public void onSuccess(SendResult<String, String> stringStringSendResult) {
-                        log.info("Pushed to topic {}", topic);
+                        log.info("Kafka::Send: Pushed to topic {}", topic);
                     }
                 });
     }
