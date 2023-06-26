@@ -1,6 +1,7 @@
 package com.uci.utils;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.uci.utils.dto.BotServiceParams;
 import com.uci.utils.kafka.KafkaConfig;
 import com.uci.utils.service.UserService;
 import io.fusionauth.client.FusionAuthClient;
@@ -18,6 +19,9 @@ public class UtilsTestConfig {
 
 	@MockBean
 	FusionAuthClient fusionAuthClient;
+
+    @MockBean
+    BotServiceParams botServiceParams;
 
 	@MockBean
 	AdminClient adminClient;
@@ -39,7 +43,7 @@ public class UtilsTestConfig {
 
     @Bean
     public BotService getBotService() {
-        return new BotService(webClient, fusionAuthClient, null);
+        return new BotService(webClient, fusionAuthClient, null, botServiceParams);
     }
 
 	@Bean

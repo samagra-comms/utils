@@ -231,29 +231,49 @@ public class UserService {
 		return usersList;
 	}
 
-	public JSONArray getUsersFromFederatedServers(String campaignID, String page) {
-		String baseURL = null;
-		if(page != null) {
-			baseURL = CAMPAIGN_URL + "/admin/bot/getAllUsers/" + campaignID + "/" + page;
-		} else {
-			baseURL = CAMPAIGN_URL + "/admin/bot/getAllUsers/" + campaignID;
-		}
-		OkHttpClient client = new OkHttpClient().newBuilder().connectTimeout(90, TimeUnit.SECONDS)
-				.writeTimeout(90, TimeUnit.SECONDS).readTimeout(90, TimeUnit.SECONDS).build();
-		MediaType mediaType = MediaType.parse("application/json");
-		Request request = new Request.Builder().url(baseURL)
-								.addHeader("Content-Type", "application/json")
-								.addHeader("admin-token", CAMPAIGN_ADMIN_TOKEN).build();
-		try {
-			Response response = client.newCall(request).execute();
-			return (new JSONObject(response.body().string())).getJSONArray("result");
-		} catch (Exception e) {
-			e.printStackTrace();
-		}
-		return null;
-	}
+    public JSONArray getUsersFromFederatedServers(String campaignID, Map<String, String> meta) {
+
+        String baseURL = null;
+        String header = null;
+        Boolean isHeader = Boolean.FALSE;
+        if (meta != null && meta.containsKey("page") && !meta.get("page").isEmpty()) {
+            baseURL = CAMPAIGN_URL + "/admin/bot/getAllUsers/" + campaignID + "/" + meta.get("page");
+        } else {
+            baseURL = CAMPAIGN_URL + "/admin/bot/getAllUsers/" + campaignID;
+        }
+        if (meta != null && meta.containsKey("conversation-authorization") && !meta.get("conversation-authorization").isEmpty()) {
+            isHeader = Boolean.TRUE;
+            header = meta.get("conversation-authorization");
+        }
+        log.info("UserService:getUsersFromFederatedServers::Calling botId: " + campaignID + " ::: Base URL : " + baseURL + " ::: isHeader Found : " + isHeader);
+        OkHttpClient client = new OkHttpClient().newBuilder().connectTimeout(90, TimeUnit.SECONDS)
+                .writeTimeout(90, TimeUnit.SECONDS).readTimeout(90, TimeUnit.SECONDS).build();
+        MediaType mediaType = MediaType.parse("application/json");
+        Request request = null;
+        if (isHeader) {
+            request = new Request.Builder().url(baseURL)
+                    .addHeader("Content-Type", "application/json")
+                    .addHeader("admin-token", CAMPAIGN_ADMIN_TOKEN)
+                    .addHeader("Conversation-Authorization", header)
+                    .build();
+        } else {
+            request = new Request.Builder().url(baseURL)
+                    .addHeader("Content-Type", "application/json")
+                    .addHeader("admin-token", CAMPAIGN_ADMIN_TOKEN)
+                    .build();
+        }
+
+        try {
+            Response response = client.newCall(request).execute();
+            return (new JSONObject(response.body().string())).getJSONArray("result");
+        } catch (Exception e) {
+            log.error("Error:getUsersFromFederatedServers::Exception: " + e.getMessage());
+        }
+        return null;
+    }
 
 	public ArrayList<JSONObject> getUsersMessageByTemplate(ObjectNode jsonData) {
+		log.info("UserService:getUsersMessageByTemplate::CallingTemplaterService");
 		String baseURL = baseUrlTemplate + "/process/testMany";
 		OkHttpClient client = new OkHttpClient().newBuilder().connectTimeout(90, TimeUnit.SECONDS)
 				.writeTimeout(90, TimeUnit.SECONDS).readTimeout(90, TimeUnit.SECONDS).build();
@@ -277,7 +297,7 @@ public class UserService {
 			}
   			return usersMessage;
   		} catch (IOException e) {
-  			e.printStackTrace();
+  			log.error("Error:getUsersMessageByTemplate::Exception: "+e.getMessage());
   		}
   		return null;
     }
