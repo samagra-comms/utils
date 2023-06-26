@@ -6,6 +6,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.github.benmanes.caffeine.cache.Cache;
 import com.inversoft.rest.ClientResponse;
 import com.uci.utils.bot.util.BotUtil;
+import com.uci.utils.dto.BotServiceParams;
 import io.fusionauth.client.FusionAuthClient;
 import io.fusionauth.domain.Application;
 import io.fusionauth.domain.api.ApplicationResponse;
@@ -41,9 +42,7 @@ public class BotService {
     public WebClient webClient;
     public FusionAuthClient fusionAuthClient;
     private Cache<Object, Object> cache;
-    private final long webClientInterval = 3000;
-    private final long retryMaxAttempts = 3;
-    private final long retryMinBackoff = 5;
+    private BotServiceParams botServiceParams;
     private final List<Class<? extends Throwable>> exceptionsToHandleList = Arrays.asList(ConnectTimeoutException.class, Errors.NativeIoException.class, PrematureCloseException.class);
 
 
@@ -60,7 +59,7 @@ public class BotService {
             return Mono.just((JsonNode) cache.getIfPresent(cacheKey));
         } else {
             try {
-                Thread.sleep(webClientInterval);
+                Thread.sleep(botServiceParams.getWebclientInterval());
             } catch (InterruptedException ex) {
                 ex.printStackTrace();
             }
@@ -93,7 +92,7 @@ public class BotService {
                             })
                             .doOnError(throwable -> log.info("Error in getting campaign: " + throwable.getMessage()))
                             .onErrorReturn(new ObjectMapper().createObjectNode())
-                            .retryWhen(Retry.backoff(retryMaxAttempts, Duration.ofSeconds(retryMinBackoff)).filter(throwable -> exceptionsToHandleList.stream().anyMatch(exception -> exception.isInstance(throwable))))
+                            .retryWhen(Retry.backoff(botServiceParams.getWebclientRetryMaxAttempts(), Duration.ofSeconds(botServiceParams.getGetWebclientMinBackoff())).filter(throwable -> exceptionsToHandleList.stream().anyMatch(exception -> exception.isInstance(throwable))))
                     )
                     .andWriteWith((key, signal) -> Mono.fromRunnable(
                             () -> Optional.ofNullable(signal.get()).ifPresent(value -> cache.put(key, value))))
@@ -116,7 +115,7 @@ public class BotService {
             return Mono.just((JsonNode) cache.getIfPresent(cacheKey));
         } else {
             try {
-                Thread.sleep(webClientInterval);
+                Thread.sleep(botServiceParams.getWebclientInterval());
             } catch (InterruptedException ex) {
                 ex.printStackTrace();
             }
@@ -149,7 +148,7 @@ public class BotService {
                             })
                             .doOnError(throwable -> log.info("Error::getBotNodeFromName in getting campaign: " + throwable.getMessage()))
                             .onErrorReturn(new ObjectMapper().createObjectNode())
-                            .retryWhen(Retry.backoff(retryMaxAttempts, Duration.ofSeconds(retryMinBackoff)).filter(throwable -> exceptionsToHandleList.stream().anyMatch(exception -> exception.isInstance(throwable))))
+                            .retryWhen(Retry.backoff(botServiceParams.getWebclientRetryMaxAttempts(), Duration.ofSeconds(botServiceParams.getGetWebclientMinBackoff())).filter(throwable -> exceptionsToHandleList.stream().anyMatch(exception -> exception.isInstance(throwable))))
                     )
                     .andWriteWith((key, signal) -> Mono.fromRunnable(
                             () -> Optional.ofNullable(signal.get()).ifPresent(value -> cache.put(key, value))))
@@ -170,7 +169,7 @@ public class BotService {
             return Mono.just((JsonNode) cache.getIfPresent(cacheKey));
         } else {
             try {
-                Thread.sleep(webClientInterval);
+                Thread.sleep(botServiceParams.getWebclientInterval());
             } catch (InterruptedException ex) {
                 ex.printStackTrace();
             }
@@ -199,7 +198,7 @@ public class BotService {
                             )
                             .doOnError(throwable -> log.info("Error::getBotNodeFromId in getting campaign: " + throwable.getMessage()))
                             .onErrorReturn(new ObjectMapper().createObjectNode())
-                            .retryWhen(Retry.backoff(retryMaxAttempts, Duration.ofSeconds(retryMinBackoff)).filter(throwable -> exceptionsToHandleList.stream().anyMatch(exception -> exception.isInstance(throwable))))
+                            .retryWhen(Retry.backoff(botServiceParams.getWebclientRetryMaxAttempts(), Duration.ofSeconds(botServiceParams.getGetWebclientMinBackoff())).filter(throwable -> exceptionsToHandleList.stream().anyMatch(exception -> exception.isInstance(throwable))))
                     )
                     .andWriteWith((key, signal) -> Mono.fromRunnable(
                             () -> Optional.ofNullable(signal.get()).ifPresent(value -> cache.put(key, value))))
@@ -265,7 +264,7 @@ public class BotService {
             return Mono.just((String) cache.getIfPresent(cacheKey));
         } else {
             try {
-                Thread.sleep(webClientInterval);
+                Thread.sleep(botServiceParams.getWebclientInterval());
             } catch (InterruptedException ex) {
                 ex.printStackTrace();
             }
@@ -303,7 +302,7 @@ public class BotService {
                             })
                             .doOnError(throwable -> log.info("BotService:getBotIdFromBotName::Exception: " + throwable.getMessage()))
                             .onErrorReturn("")
-                            .retryWhen(Retry.backoff(retryMaxAttempts, Duration.ofSeconds(retryMinBackoff)).filter(throwable -> exceptionsToHandleList.stream().anyMatch(exception -> exception.isInstance(throwable))))
+                            .retryWhen(Retry.backoff(botServiceParams.getWebclientRetryMaxAttempts(), Duration.ofSeconds(botServiceParams.getGetWebclientMinBackoff())).filter(throwable -> exceptionsToHandleList.stream().anyMatch(exception -> exception.isInstance(throwable))))
                     )
                     .andWriteWith((key, signal) -> Mono.fromRunnable(
                             () -> Optional.ofNullable(signal.get()).ifPresent(value -> cache.put(key, value))))
@@ -358,7 +357,7 @@ public class BotService {
                                 })
                                 .doOnError(throwable -> log.error("BotService:updateUser::addUser:Exception occured while calling uci api: " + throwable.getMessage()))
                                 .onErrorReturn(Pair.of(false, ""))
-                                .retryWhen(Retry.backoff(retryMaxAttempts, Duration.ofSeconds(retryMinBackoff)).filter(throwable -> exceptionsToHandleList.stream().anyMatch(exception -> exception.isInstance(throwable))));
+                                .retryWhen(Retry.backoff(botServiceParams.getWebclientRetryMaxAttempts(), Duration.ofSeconds(botServiceParams.getGetWebclientMinBackoff())).filter(throwable -> exceptionsToHandleList.stream().anyMatch(exception -> exception.isInstance(throwable))));
                     }
                 });
     }
@@ -377,7 +376,7 @@ public class BotService {
             return Mono.just((JsonNode) cache.getIfPresent(cacheKey));
         } else {
             try {
-                Thread.sleep(webClientInterval);
+                Thread.sleep(botServiceParams.getWebclientInterval());
             } catch (Exception ex) {
                 ex.printStackTrace();
             }
@@ -412,7 +411,7 @@ public class BotService {
                                 }
                             })
                             .doOnError(throwable -> log.error("BotService:getAdapterByID::Exception: " + throwable.getMessage()))
-                            .retryWhen(Retry.backoff(retryMaxAttempts, Duration.ofSeconds(retryMinBackoff)).filter(throwable -> exceptionsToHandleList.stream().anyMatch(exception -> exception.isInstance(throwable))))
+                            .retryWhen(Retry.backoff(botServiceParams.getWebclientRetryMaxAttempts(), Duration.ofSeconds(botServiceParams.getGetWebclientMinBackoff())).filter(throwable -> exceptionsToHandleList.stream().anyMatch(exception -> exception.isInstance(throwable))))
                     )
                     .andWriteWith((key, signal) -> Mono.fromRunnable(
                             () -> Optional.ofNullable(signal.get()).ifPresent(value -> cache.put(key, value))))
@@ -502,7 +501,7 @@ public class BotService {
             return Mono.just((JsonNode) cache.getIfPresent(cacheKey));
         } else {
             try {
-                Thread.sleep(webClientInterval);
+                Thread.sleep(botServiceParams.getWebclientInterval());
             } catch (InterruptedException ex) {
                 ex.printStackTrace();
             }
@@ -535,7 +534,7 @@ public class BotService {
                             })
                             .doOnError(throwable -> log.error("BotService:getVaultCredentials::Exception: " + throwable.getMessage()))
                             .doOnNext(value -> cache.put(cacheKey, value))
-                            .retryWhen(Retry.backoff(retryMaxAttempts, Duration.ofSeconds(retryMinBackoff)).filter(throwable -> exceptionsToHandleList.stream().anyMatch(exception -> exception.isInstance(throwable))))
+                            .retryWhen(Retry.backoff(botServiceParams.getWebclientRetryMaxAttempts(), Duration.ofSeconds(botServiceParams.getGetWebclientMinBackoff())).filter(throwable -> exceptionsToHandleList.stream().anyMatch(exception -> exception.isInstance(throwable))))
                     )
                     .andWriteWith((key, signal) -> Mono.fromRunnable(() -> Optional.ofNullable(signal.get()).ifPresent(value -> cache.put(key, value))))
                     .log("cache");
@@ -555,7 +554,7 @@ public class BotService {
             return Mono.just((String) cache.getIfPresent(cacheKey));
         } else {
             try {
-                Thread.sleep(webClientInterval);
+                Thread.sleep(botServiceParams.getWebclientInterval());
             } catch (InterruptedException ex) {
                 ex.printStackTrace();
             }
@@ -588,7 +587,7 @@ public class BotService {
                             )
                             .onErrorReturn(null)
                             .doOnError(throwable -> log.error("Error in getFirstFormByBotID >>> " + throwable.getMessage()))
-                            .retryWhen(Retry.backoff(retryMaxAttempts, Duration.ofSeconds(retryMinBackoff)).filter(throwable -> exceptionsToHandleList.stream().anyMatch(exception -> exception.isInstance(throwable))))
+                            .retryWhen(Retry.backoff(botServiceParams.getWebclientRetryMaxAttempts(), Duration.ofSeconds(botServiceParams.getGetWebclientMinBackoff())).filter(throwable -> exceptionsToHandleList.stream().anyMatch(exception -> exception.isInstance(throwable))))
                     )
                     .andWriteWith((key, signal) -> Mono.fromRunnable(
                             () -> Optional.ofNullable(signal.get()).ifPresent(value -> cache.put(key, value))))
@@ -609,7 +608,7 @@ public class BotService {
             return Mono.just((String) cache.getIfPresent(cacheKey));
         } else {
             try {
-                Thread.sleep(webClientInterval);
+                Thread.sleep(botServiceParams.getWebclientInterval());
             } catch (InterruptedException ex) {
                 ex.printStackTrace();
             }
@@ -642,7 +641,7 @@ public class BotService {
                             )
                             .onErrorReturn(null)
                             .doOnError(throwable -> log.error("Error in getFirstFormByBotID >>> " + throwable.getMessage()))
-                            .retryWhen(Retry.backoff(retryMaxAttempts, Duration.ofSeconds(retryMinBackoff)).filter(throwable -> exceptionsToHandleList.stream().anyMatch(exception -> exception.isInstance(throwable))))
+                            .retryWhen(Retry.backoff(botServiceParams.getWebclientRetryMaxAttempts(), Duration.ofSeconds(botServiceParams.getGetWebclientMinBackoff())).filter(throwable -> exceptionsToHandleList.stream().anyMatch(exception -> exception.isInstance(throwable))))
                     )
                     .andWriteWith((key, signal) -> Mono.fromRunnable(
                             () -> Optional.ofNullable(signal.get()).ifPresent(value -> cache.put(key, value))))

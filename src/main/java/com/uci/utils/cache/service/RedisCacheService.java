@@ -4,7 +4,9 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.ObjectWriter;
 import com.uci.utils.cache.RedisCachePrefix;
+import lombok.NoArgsConstructor;
 import org.apache.commons.lang3.tuple.Pair;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.redis.connection.RedisConnection;
 import org.springframework.data.redis.core.*;
 import org.springframework.stereotype.Service;
@@ -24,6 +26,7 @@ import java.util.concurrent.TimeUnit;
 @Slf4j
 public class RedisCacheService {
 	private RedisTemplate<String, Object> redisTemplate;
+    public Integer redisKeyTimeout;
 
     /**
      * Get is redis cache enabled or disabled
@@ -269,7 +272,7 @@ public class RedisCacheService {
      * @return
      */
     private Integer getExpireTimeInSeconds() {
-        return 3600; //60*60 = 1 Hour
+        return redisKeyTimeout;
     }
 
     /**
