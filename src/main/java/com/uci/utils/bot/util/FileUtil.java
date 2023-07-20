@@ -114,12 +114,14 @@ public class FileUtil {
 	 * @return
 	 */
 	public static String validateFileSizeByInputBytes(byte[] inputBytes, Double maxSizeForMedia) {
-		/* Discard if file size is greater than MAX_SIZE_FOR_MEDIA */
 		if (maxSizeForMedia != null && inputBytes.length > maxSizeForMedia) {
-			return "file size is greater than limit : " + inputBytes.length;
+			String errorMessage = "File size is greater than the limit: " + inputBytes.length;
+			return errorMessage;
 		}
+
 		return "";
 	}
+
 
 	/**
 	 * Function to get Mime type of file from url
@@ -199,19 +201,29 @@ public class FileUtil {
 	 * @param mime_type
 	 * @return
 	 */
+//	public static boolean isValidFileType(String mime_type) {
+//		ArrayList<String> list = getImageFileTypes();
+//		list.addAll(getAudioFileTypes());
+//		list.addAll(getVideoFileTypes());
+//		list.addAll(getDocumentFileTypes());
+//		for(int i=0; i < list.size(); i++) {
+//			if(list.get(i).equals(mime_type)) {
+//				return true;
+//			}
+//		}
+//		return false;
+//	}
 	public static boolean isValidFileType(String mime_type) {
-		ArrayList<String> list = getImageFileTypes();
-		list.addAll(getAudioFileTypes());
-		list.addAll(getVideoFileTypes());
-		list.addAll(getDocumentFileTypes());
-		for(int i=0; i < list.size(); i++) {
-			if(list.get(i).equals(mime_type)) {
-				return true;
-			}
-		}
-		return false;
+		ArrayList<String> validFileTypes = new ArrayList<>();
+		validFileTypes.addAll(getImageFileTypes());
+		validFileTypes.addAll(getAudioFileTypes());
+		validFileTypes.addAll(getVideoFileTypes());
+		validFileTypes.addAll(getDocumentFileTypes());
+
+		return validFileTypes.contains(mime_type);
 	}
-	
+
+
 	/**
 	 * Get Image file types list
 	 * @return

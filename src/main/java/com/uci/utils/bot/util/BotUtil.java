@@ -82,13 +82,13 @@ public class BotUtil {
 	 * @return
 	 */
 	public static Boolean checkBotValidFromJsonNode(JsonNode data) {
-		String status = data.findValue("status").asText();
-    	String startDate = data.findValue("startDate").asText();
-    	String endDate = data.findValue("endDate").asText();
+		String botstatus = data.findValue("status").asText();
+    	String botstartDate = data.findValue("startDate").asText();
+    	String botendDate = data.findValue("endDate").asText();
 		
-    	log.info("Bot Status: "+status+", Start Date: "+startDate+", End Date: "+endDate);
+    	log.info("Bot Status: "+botstatus+", Start Date: "+botstartDate+", End Date: "+botendDate);
     	
-    	return checkBotValid(status, startDate, endDate);
+    	return checkBotValid(botstatus, botstartDate, botendDate);
 	}
 
 	/**
@@ -99,13 +99,16 @@ public class BotUtil {
 	 * @return
 	 */
 	public static Boolean checkBotValid(String status, String startDate, String endDate) {
-		if(checkBotLiveStatus(status) && checkBotStartDateValid(startDate) 
-				&& checkBotEndDateValid(endDate)
-				&& !(startDate == null || startDate == "null" || startDate.isEmpty())) {
-			return true;
-		}
-		return false;
+		boolean isBotValid = checkBotLiveStatus(status) &&
+				checkBotStartDateValid(startDate) &&
+				checkBotEndDateValid(endDate) &&
+				startDate != null &&
+				!startDate.equals("null") &&
+				!startDate.isEmpty();
+
+		return isBotValid;
 	}
+
 
 	/**
 	 * Check if bot' status is live/enabled
