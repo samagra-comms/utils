@@ -19,7 +19,7 @@
 	<name>utils</name>
 	<description>Demo project for Spring Boot</description>
 	<properties>
-		<java.version>11</java.version>
+		<java.version>17</java.version>
 		<mockwebserver.version>4.7.2</mockwebserver.version>
 		<okhttp3.version>4.7.2</okhttp3.version>
 	</properties>
@@ -64,6 +64,8 @@
 			<groupId>io.projectreactor.kafka</groupId>
 			<artifactId>reactor-kafka</artifactId>
 		</dependency>
+
+
 		<dependency>
 			<groupId>org.apache.logging.log4j</groupId>
 			<artifactId>log4j-slf4j-impl</artifactId>
