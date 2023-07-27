@@ -32,14 +32,12 @@ public class MavenWrapperDownloader {
      * Path to the maven-wrapper.properties file, which might contain a downloadUrl property to
      * use instead of the default one.
      */
-    private static final String MAVEN_WRAPPER_PROPERTIES_PATH =
-            ".mvn/wrapper/maven-wrapper.properties";
+    private static final String MAVEN_WRAPPER_PROPERTIES_PATH = ".mvn/wrapper/maven-wrapper.properties";
 
     /**
      * Path where the maven-wrapper.jar will be saved to.
      */
-    private static final String MAVEN_WRAPPER_JAR_PATH =
-            ".mvn/wrapper/maven-wrapper.jar";
+    private static final String MAVEN_WRAPPER_JAR_PATH = ".mvn/wrapper/maven-wrapper.jar";
 
     /**
      * Name of the property which should be used to override the default download url for the wrapper.
@@ -89,7 +87,7 @@ public class MavenWrapperDownloader {
             System.out.println("Done");
             System.exit(0);
         } catch (Throwable e) {
-            System.out.println("- Error downloading");
+            System.out.println("-Error downloading");
             e.printStackTrace();
             System.exit(1);
         }
@@ -111,8 +109,8 @@ public class MavenWrapperDownloader {
         rbc = Channels.newChannel(website.openStream());
         FileOutputStream fos = new FileOutputStream(destination);
         fos.getChannel().transferFrom(rbc, 0, Long.MAX_VALUE);
-        fos.close();
         rbc.close();
+        fos.close();
     }
 
 }
