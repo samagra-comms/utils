@@ -27,33 +27,39 @@ import lombok.extern.slf4j.Slf4j;
 public class CaffeineCacheController {
     @Autowired
     private Cache<Object, Object> cache;
-    @Value("${spring.caffeine.authorization.key}")
+    @Value("${spring.caffeine.authorization.key:#{''}}")
     private String authorizationKey;
 
     /**
      * call this to invalidate all cache instances
      */
     @GetMapping(path = "/all", produces = {"application/json", "text/json"})
-    public ResponseEntity getAll() {
+    public ResponseEntity getAll(@RequestHeader(name = "Authorization") String authorizationHeader) {
         ObjectMapper mapper = new ObjectMapper();
         JsonNode jsonNode;
         try {
-            jsonNode = mapper.readTree("{\"id\":\"api.content.cache\",\"ver\":\"3.0\",\"ts\":\"2021-06-26T22:47:05Z+05:30\",\"responseCode\":\"OK\",\"result\":{}}");
-            JsonNode resultNode = mapper.createObjectNode();
-            cache.asMap().keySet().forEach(key -> {
-                String cacheName = key.toString();
-                ((ObjectNode) resultNode).put(cacheName, cache.getIfPresent(cacheName).toString());
-            });
-            ((ObjectNode) jsonNode).put("result", resultNode);
-            return ResponseEntity.ok(jsonNode);
-        } catch (JsonMappingException e) {
-            // TODO Auto-generated catch block
-            e.printStackTrace();
-        } catch (JsonProcessingException e) {
-            // TODO Auto-generated catch block
-            e.printStackTrace();
+            if (authorizationKey.equals(authorizationHeader)) {
+                jsonNode = mapper.readTree("{\"id\":\"api.content.cache\",\"ver\":\"3.0\",\"ts\":\"2021-06-26T22:47:05Z+05:30\",\"responseCode\":\"OK\",\"result\":{}}");
+                JsonNode resultNode = mapper.createObjectNode();
+                cache.asMap().keySet().forEach(key -> {
+                    String cacheName = key.toString();
+                    ((ObjectNode) resultNode).put(cacheName, cache.getIfPresent(cacheName).toString());
+                });
+                ((ObjectNode) jsonNode).put("result", resultNode);
+                return ResponseEntity.ok(resultNode);
+            } else {
+                Map<String, Object> map = new HashMap<>();
+                map.put("message", "Unauthorized. Invalid secure key.");
+                map.put("status", "failed");
+                return new ResponseEntity<>(map, HttpStatus.UNAUTHORIZED);
+            }
+        } catch (Exception ex) {
+            log.error("CaffeineCacheController:getAll: Error while getting cache : " + ex.getMessage());
+            Map<String, Object> map = new HashMap<>();
+            map.put("message", ex.getMessage());
+            map.put("status", "failed");
+            return new ResponseEntity<>(map, HttpStatus.INTERNAL_SERVER_ERROR);
         }
-        return ResponseEntity.ok(null);
     }
 
     /**
