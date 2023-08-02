@@ -66,33 +66,38 @@ public class BotService {
             return CacheMono.lookup(key -> Mono.justOrEmpty(cache.getIfPresent(cacheKey) != null ? (JsonNode) cache.getIfPresent(key) : null)
                             .map(Signal::next), cacheKey)
                     .onCacheMissResume(() -> webClient.get()
-                            .uri(builder -> builder.path("admin/bot/search/internal")
-                                    .queryParam("perPage", 5)
-                                    .queryParam("page", 1)
-                                    .queryParam("match", true)
-                                    .queryParam("startingMessage", startingMessage)
-                                    .build())
-                            .retrieve().bodyToMono(String.class).map(response -> {
-                                if (response != null) {
-                                    log.info("Call getBotNodeFromStartingMessage : " + response + " cache : " + cache.getIfPresent(cacheKey));
-                                    try {
-                                        ObjectMapper mapper = new ObjectMapper();
-                                        JsonNode root = mapper.readTree(response);
-                                        if (root.path("result") != null && root.path("result").get(0) != null && !root.path("result").get(0).isEmpty()) {
-                                            return root.path("result").get(0);
-                                        }
-                                        return new ObjectMapper().createObjectNode();
-                                    } catch (JsonProcessingException jsonMappingException) {
-                                        return new ObjectMapper().createObjectNode();
-                                    }
+                                    .uri(builder -> builder.path("admin/bot/search")
+                                            .queryParam("perPage", 5)
+                                            .queryParam("page", 1)
+                                            .queryParam("match", true)
+                                            .queryParam("startingMessage", startingMessage)
+                                            .build())
+                                    .retrieve().bodyToMono(String.class).map(response -> {
+                                        if (response != null) {
+                                            log.info("Call getBotNodeFromStartingMessage : " + response + " cache : " + cache.getIfPresent(cacheKey));
+                                            try {
+                                                ObjectMapper mapper = new ObjectMapper();
+                                                JsonNode root = mapper.readTree(response);
+//                                        if (root.path("result") != null && root.path("result").get(0) != null && !root.path("result").get(0).isEmpty()) {
+//                                            return root.path("result").get(0);
+//                                        }
+                                                if (root.path("result") != null && root.path("result").get("data") != null
+                                                        && root.path("result").get("data").size() > 0
+                                                        && !root.path("result").get("data").get(0).isEmpty()) {
+                                                    return root.path("result").get("data").get(0);
+                                                }
+                                                return new ObjectMapper().createObjectNode();
+                                            } catch (JsonProcessingException jsonMappingException) {
+                                                return new ObjectMapper().createObjectNode();
+                                            }
 
-                                } else {
-                                    return new ObjectMapper().createObjectNode();
-                                }
-                            })
-                            .doOnError(throwable -> log.info("Error in getting campaign: " + throwable.getMessage()))
-                            .onErrorReturn(new ObjectMapper().createObjectNode())
-                            .retryWhen(Retry.backoff(botServiceParams.getWebclientRetryMaxAttempts(), Duration.ofSeconds(botServiceParams.getGetWebclientMinBackoff())).filter(throwable -> exceptionsToHandleList.stream().anyMatch(exception -> exception.isInstance(throwable))))
+                                        } else {
+                                            return new ObjectMapper().createObjectNode();
+                                        }
+                                    })
+                                    .doOnError(throwable -> log.info("Error in getting campaign: " + throwable.getMessage()))
+                                    .onErrorReturn(new ObjectMapper().createObjectNode())
+                                    .retryWhen(Retry.backoff(botServiceParams.getWebclientRetryMaxAttempts(), Duration.ofSeconds(botServiceParams.getGetWebclientMinBackoff())).filter(throwable -> exceptionsToHandleList.stream().anyMatch(exception -> exception.isInstance(throwable))))
                     )
                     .andWriteWith((key, signal) -> Mono.fromRunnable(
                             () -> Optional.ofNullable(signal.get()).ifPresent(value -> cache.put(key, value))))
@@ -122,7 +127,7 @@ public class BotService {
             return CacheMono.lookup(key -> Mono.justOrEmpty(cache.getIfPresent(cacheKey) != null ? (JsonNode) cache.getIfPresent(key) : null)
                             .map(Signal::next), cacheKey)
                     .onCacheMissResume(() -> webClient.get()
-                            .uri(builder -> builder.path("admin/bot/search/internal")
+                            .uri(builder -> builder.path("admin/bot/search")
                                     .queryParam("perPage", 5)
                                     .queryParam("page", 1)
                                     .queryParam("match", true)
@@ -134,8 +139,10 @@ public class BotService {
                                     try {
                                         ObjectMapper mapper = new ObjectMapper();
                                         JsonNode root = mapper.readTree(response);
-                                        if (root.path("result") != null && root.path("result").get(0) != null && !root.path("result").get(0).isEmpty()) {
-                                            return root.path("result").get(0);
+                                        if (root.path("result") != null && root.path("result").get("data") != null
+                                                && root.path("result").get("data").size() > 0
+                                                && !root.path("result").get("data").get(0).isEmpty()) {
+                                            return root.path("result").get("data").get(0);
                                         }
                                         return new ObjectMapper().createObjectNode();
                                     } catch (JsonProcessingException jsonMappingException) {
@@ -216,7 +223,7 @@ public class BotService {
 //		return CacheMono.lookup(key -> Mono.justOrEmpty(cache.getIfPresent(cacheKey) != null ? cache.getIfPresent(key).toString() : null)
 //					.map(Signal::next), cacheKey)
 //				.onCacheMissResume(() -> webClient.get()
-//						.uri(builder -> builder.path("admin/bot/search/internal")
+//						.uri(builder -> builder.path("admin/bot/search")
 //								.queryParam("perPage", 5)
 //								.queryParam("page", 1)
 //								.queryParam("match", true)
@@ -270,39 +277,45 @@ public class BotService {
             }
             return CacheMono.lookup(key -> Mono.justOrEmpty(cache.getIfPresent(cacheKey) != null ? cache.getIfPresent(key).toString() : null)
                             .map(Signal::next), cacheKey)
-                    .onCacheMissResume(() -> webClient.get().uri(builder -> builder.path("admin/bot/search/internal")
-                                    .queryParam("perPage", 5)
-                                    .queryParam("page", 1)
-                                    .queryParam("match", true)
-                                    .queryParam("name", botName)
-                                    .build())
-                            .retrieve().bodyToMono(String.class).map(new Function<String, String>() {
-                                @Override
-                                public String apply(String response) {
-                                    if (response != null) {
-                                        log.info("BotService:getBotIdFromBotName::Got Data From UCI Api : " + response + " cache : " + cache.getIfPresent(cacheKey));
-                                        ObjectMapper mapper = new ObjectMapper();
-                                        try {
-                                            JsonNode root = mapper.readTree(response);
-                                            if (root.path("result") != null && root.path("result").get(0) != null
-                                                    && !root.path("result").get(0).isEmpty()
-                                                    && BotUtil.checkBotValidFromJsonNode(root.path("result").get(0))) {
-                                                return BotUtil.getBotNodeData(root.path("result").get(0), "id");
+                    .onCacheMissResume(() -> webClient.get().uri(builder -> builder.path("admin/bot/search")
+                                            .queryParam("perPage", 5)
+                                            .queryParam("page", 1)
+                                            .queryParam("match", true)
+                                            .queryParam("name", botName)
+                                            .build())
+                                    .retrieve().bodyToMono(String.class).map(new Function<String, String>() {
+                                        @Override
+                                        public String apply(String response) {
+                                            if (response != null) {
+                                                log.info("BotService:getBotIdFromBotName::Got Data From UCI Api : " + response + " cache : " + cache.getIfPresent(cacheKey));
+                                                ObjectMapper mapper = new ObjectMapper();
+                                                try {
+                                                    JsonNode root = mapper.readTree(response);
+//                                            if (root.path("result") != null && root.path("result").get(0) != null
+//                                                    && !root.path("result").get(0).isEmpty()
+//                                                    && BotUtil.checkBotValidFromJsonNode(root.path("result").get(0))) {
+//                                                return BotUtil.getBotNodeData(root.path("result").get(0), "id");
+//                                            }
+                                                    if (root.path("result") != null && root.path("result").get("data") != null
+                                                            && root.path("result").get("data").size() > 0
+                                                            && !root.path("result").get("data").get(0).isEmpty()
+                                                            && BotUtil.checkBotValidFromJsonNode(root.path("result").get("data").get(0))) {
+                                                        return BotUtil.getBotNodeData(root.path("result").get("data").get(0), "id");
+                                                    }
+                                                    return null;
+                                                } catch (JsonProcessingException jsonMappingException) {
+                                                    log.error("Error while parsing data from json : " + jsonMappingException.getMessage());
+                                                    return null;
+                                                }
+
+                                            } else {
                                             }
                                             return null;
-                                        } catch (JsonProcessingException jsonMappingException) {
-                                            log.error("Error while parsing data from json : " + jsonMappingException.getMessage());
-                                            return null;
                                         }
-
-                                    } else {
-                                    }
-                                    return null;
-                                }
-                            })
-                            .doOnError(throwable -> log.info("BotService:getBotIdFromBotName::Exception: " + throwable.getMessage()))
-                            .onErrorReturn("")
-                            .retryWhen(Retry.backoff(botServiceParams.getWebclientRetryMaxAttempts(), Duration.ofSeconds(botServiceParams.getGetWebclientMinBackoff())).filter(throwable -> exceptionsToHandleList.stream().anyMatch(exception -> exception.isInstance(throwable))))
+                                    })
+                                    .doOnError(throwable -> log.info("BotService:getBotIdFromBotName::Exception: " + throwable.getMessage()))
+                                    .onErrorReturn("")
+                                    .retryWhen(Retry.backoff(botServiceParams.getWebclientRetryMaxAttempts(), Duration.ofSeconds(botServiceParams.getGetWebclientMinBackoff())).filter(throwable -> exceptionsToHandleList.stream().anyMatch(exception -> exception.isInstance(throwable))))
                     )
                     .andWriteWith((key, signal) -> Mono.fromRunnable(
                             () -> Optional.ofNullable(signal.get()).ifPresent(value -> cache.put(key, value))))
@@ -384,34 +397,34 @@ public class BotService {
             return CacheMono.lookup(key -> Mono.justOrEmpty(cache.getIfPresent(cacheKey) != null ? (JsonNode) cache.getIfPresent(key) : null)
                             .map(Signal::next), cacheKey)
                     .onCacheMissResume(() -> webClient.get().uri(new Function<UriBuilder, URI>() {
-                                @Override
-                                public URI apply(UriBuilder builder) {
-                                    URI uri = builder.path("admin/adapter/" + adapterID).build();
-                                    return uri;
-                                }
-                            }).retrieve().bodyToMono(String.class).map(new Function<String, JsonNode>() {
-                                @Override
-                                public JsonNode apply(String response) {
-                                    log.info("BotService:getAdapterByID::Got Data From UCI Api : cache key : " + cacheKey + " cache data : " + cache.getIfPresent(cacheKey));
-                                    if (response != null) {
-                                        ObjectMapper mapper = new ObjectMapper();
-                                        try {
-                                            JsonNode root = mapper.readTree(response);
-                                            if (root != null && root.path("result") != null && root.path("result").path("id") != null && !root.path("result").path("id").asText().isEmpty()) {
-                                                return root.path("result");
+                                        @Override
+                                        public URI apply(UriBuilder builder) {
+                                            URI uri = builder.path("admin/adapter/" + adapterID).build();
+                                            return uri;
+                                        }
+                                    }).retrieve().bodyToMono(String.class).map(new Function<String, JsonNode>() {
+                                        @Override
+                                        public JsonNode apply(String response) {
+                                            log.info("BotService:getAdapterByID::Got Data From UCI Api : cache key : " + cacheKey + " cache data : " + cache.getIfPresent(cacheKey));
+                                            if (response != null) {
+                                                ObjectMapper mapper = new ObjectMapper();
+                                                try {
+                                                    JsonNode root = mapper.readTree(response);
+                                                    if (root != null && root.path("result") != null && root.path("result").path("id") != null && !root.path("result").path("id").asText().isEmpty()) {
+                                                        return root.path("result");
+                                                    }
+                                                    return null;
+                                                } catch (JsonProcessingException jsonMappingException) {
+                                                    return null;
+                                                }
+
+                                            } else {
                                             }
                                             return null;
-                                        } catch (JsonProcessingException jsonMappingException) {
-                                            return null;
                                         }
-
-                                    } else {
-                                    }
-                                    return null;
-                                }
-                            })
-                            .doOnError(throwable -> log.error("BotService:getAdapterByID::Exception: " + throwable.getMessage()))
-                            .retryWhen(Retry.backoff(botServiceParams.getWebclientRetryMaxAttempts(), Duration.ofSeconds(botServiceParams.getGetWebclientMinBackoff())).filter(throwable -> exceptionsToHandleList.stream().anyMatch(exception -> exception.isInstance(throwable))))
+                                    })
+                                    .doOnError(throwable -> log.error("BotService:getAdapterByID::Exception: " + throwable.getMessage()))
+                                    .retryWhen(Retry.backoff(botServiceParams.getWebclientRetryMaxAttempts(), Duration.ofSeconds(botServiceParams.getGetWebclientMinBackoff())).filter(throwable -> exceptionsToHandleList.stream().anyMatch(exception -> exception.isInstance(throwable))))
                     )
                     .andWriteWith((key, signal) -> Mono.fromRunnable(
                             () -> Optional.ofNullable(signal.get()).ifPresent(value -> cache.put(key, value))))
