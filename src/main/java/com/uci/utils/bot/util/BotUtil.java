@@ -71,7 +71,7 @@ public class BotUtil {
 			}
 			return String.format("This conversation is not active yet. Please try again then.");
 		} else if(!checkBotEndDateValid(endDate)) {
-			return String.format("This conversation has expired now. Please contact your state admin to seek help with this.");
+			return String.format("यह फॉर्म समाप्त हो गया है !");
 		}
 		return "true";
 	}
