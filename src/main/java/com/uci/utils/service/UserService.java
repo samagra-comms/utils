@@ -4,6 +4,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
+import com.github.benmanes.caffeine.cache.Cache;
 import com.inversoft.error.Errors;
 import com.inversoft.rest.ClientResponse;
 import com.uci.utils.BotService;
@@ -56,6 +57,9 @@ public class UserService {
 
 	@Autowired
 	private FusionAuthClient fusionAuthClient;
+
+	@Autowired
+	Cache<Object, Object> cache;
 
 	private static String shortnrBaseURL = "http://localhost:9999";
 
@@ -394,7 +398,10 @@ public class UserService {
 
 	public JSONObject getUserByPhoneFromFederatedServers(String campaignID, String phone){
         String baseURL = CAMPAIGN_URL + "/admin/v1/bot/getFederatedUsersByPhone/" + campaignID + "/" + phone;
-
+		String cacheKey = String.format("FEDERATED USERS: USER SERVICE: %s", baseURL);
+		if (cache.getIfPresent(cacheKey) != null) {
+			return (JSONObject) cache.getIfPresent(cacheKey);
+		}
         OkHttpClient client = new OkHttpClient().newBuilder()
                 .connectTimeout(90, TimeUnit.SECONDS)
                 .writeTimeout(90, TimeUnit.SECONDS)
@@ -414,6 +421,7 @@ public class UserService {
             	log.info("campaignID: "+campaignID+", phone: "+phone+", users data: "+users.getJSONObject("result"));
                 JSONObject user = users.getJSONObject("result").getJSONObject("data").getJSONObject("user");
                 user.put("is_registered", "yes");
+				cache.put(cacheKey, user);
                 return user;
             }catch (Exception e){
                 JSONObject user = new JSONObject();
