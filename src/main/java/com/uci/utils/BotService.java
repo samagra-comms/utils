@@ -58,49 +58,49 @@ public class BotService {
             log.info("getBotNodeFromStartingMessage from cache : " + cache.getIfPresent(cacheKey));
             return Mono.just((JsonNode) cache.getIfPresent(cacheKey));
         } else {
-            try {
-                Thread.sleep(botServiceParams.getWebclientInterval());
-            } catch (InterruptedException ex) {
-                ex.printStackTrace();
-            }
-            return CacheMono.lookup(key -> Mono.justOrEmpty(cache.getIfPresent(cacheKey) != null ? (JsonNode) cache.getIfPresent(key) : null)
-                            .map(Signal::next), cacheKey)
+            return CacheMono
+                    .lookup(key -> Mono.justOrEmpty(cache.getIfPresent(cacheKey) != null ? (JsonNode) cache.getIfPresent(key) : null)
+                    .map(Signal::next), cacheKey)
                     .onCacheMissResume(() -> webClient.get()
-                                    .uri(builder -> builder.path("admin/bot/search")
-                                            .queryParam("perPage", 5)
-                                            .queryParam("page", 1)
-                                            .queryParam("match", true)
-                                            .queryParam("startingMessage", startingMessage)
-                                            .build())
-                                    .retrieve().bodyToMono(String.class).map(response -> {
-                                        if (response != null) {
-                                            log.info("Call getBotNodeFromStartingMessage : " + response + " cache : " + cache.getIfPresent(cacheKey));
-                                            try {
-                                                ObjectMapper mapper = new ObjectMapper();
-                                                JsonNode root = mapper.readTree(response);
-//                                        if (root.path("result") != null && root.path("result").get(0) != null && !root.path("result").get(0).isEmpty()) {
-//                                            return root.path("result").get(0);
-//                                        }
-                                                if (root.path("result") != null && root.path("result").get("data") != null
-                                                        && root.path("result").get("data").size() > 0
-                                                        && !root.path("result").get("data").get(0).isEmpty()) {
-                                                    return root.path("result").get("data").get(0);
-                                                }
-                                                return new ObjectMapper().createObjectNode();
-                                            } catch (JsonProcessingException jsonMappingException) {
-                                                return new ObjectMapper().createObjectNode();
-                                            }
-
-                                        } else {
-                                            return new ObjectMapper().createObjectNode();
+                            .uri(builder -> builder.path("admin/bot/search")
+                                    .queryParam("perPage", 5)
+                                    .queryParam("page", 1)
+                                    .queryParam("match", true)
+                                    .queryParam("startingMessage", startingMessage)
+                                    .build())
+                            .retrieve().bodyToMono(String.class).map(response -> {
+                                if (response != null) {
+                                    log.info("Call getBotNodeFromStartingMessage : " + response + " cache : " + cache.getIfPresent(cacheKey));
+                                    try {
+                                        ObjectMapper mapper = new ObjectMapper();
+                                        JsonNode root = mapper.readTree(response);
+    //                                        if (root.path("result") != null && root.path("result").get(0) != null && !root.path("result").get(0).isEmpty()) {
+    //                                            return root.path("result").get(0);
+    //                                        }
+                                        if (root.path("result") != null && root.path("result").get("data") != null
+                                                && root.path("result").get("data").size() > 0
+                                                && !root.path("result").get("data").get(0).isEmpty()) {
+                                            return root.path("result").get("data").get(0);
                                         }
-                                    })
-                                    .doOnError(throwable -> log.info("Error in getting campaign: " + throwable.getMessage()))
-                                    .onErrorReturn(new ObjectMapper().createObjectNode())
-                                    .retryWhen(Retry.backoff(botServiceParams.getWebclientRetryMaxAttempts(), Duration.ofSeconds(botServiceParams.getGetWebclientMinBackoff())).filter(throwable -> exceptionsToHandleList.stream().anyMatch(exception -> exception.isInstance(throwable))))
+                                        return new ObjectMapper().createObjectNode();
+                                    } catch (JsonProcessingException jsonMappingException) {
+                                        return new ObjectMapper().createObjectNode();
+                                    }
+
+                                } else {
+                                    return new ObjectMapper().createObjectNode();
+                                }
+                            })
+                            .doOnError(throwable -> log.info("Error in getting campaign: " + throwable.getMessage()))
+                            .onErrorReturn(new ObjectMapper().createObjectNode())
+                            .retryWhen(Retry.backoff(botServiceParams.getWebclientRetryMaxAttempts(), Duration.ofSeconds(botServiceParams.getGetWebclientMinBackoff())).filter(throwable -> exceptionsToHandleList.stream().anyMatch(exception -> exception.isInstance(throwable))))
                     )
-                    .andWriteWith((key, signal) -> Mono.fromRunnable(
-                            () -> Optional.ofNullable(signal.get()).ifPresent(value -> cache.put(key, value))))
+                    .andWriteWith((key, signal) -> Mono.fromRunnable(() ->
+                            Optional.ofNullable(signal.get()).ifPresent(value -> {
+                                if (value != null && !value.isNull() && !value.isEmpty())
+                                    cache.put(key, value);
+                            })
+                    ))
                     .log("cache");
         }
     }
@@ -119,13 +119,9 @@ public class BotService {
             log.info("getBotNodeFromName from cache : " + cache.getIfPresent(cacheKey));
             return Mono.just((JsonNode) cache.getIfPresent(cacheKey));
         } else {
-            try {
-                Thread.sleep(botServiceParams.getWebclientInterval());
-            } catch (InterruptedException ex) {
-                ex.printStackTrace();
-            }
-            return CacheMono.lookup(key -> Mono.justOrEmpty(cache.getIfPresent(cacheKey) != null ? (JsonNode) cache.getIfPresent(key) : null)
-                            .map(Signal::next), cacheKey)
+            return CacheMono
+                    .lookup(key -> Mono.justOrEmpty(cache.getIfPresent(cacheKey) != null ? (JsonNode) cache.getIfPresent(key) : null)
+                    .map(Signal::next), cacheKey)
                     .onCacheMissResume(() -> webClient.get()
                             .uri(builder -> builder.path("admin/bot/search")
                                     .queryParam("perPage", 5)
@@ -157,8 +153,12 @@ public class BotService {
                             .onErrorReturn(new ObjectMapper().createObjectNode())
                             .retryWhen(Retry.backoff(botServiceParams.getWebclientRetryMaxAttempts(), Duration.ofSeconds(botServiceParams.getGetWebclientMinBackoff())).filter(throwable -> exceptionsToHandleList.stream().anyMatch(exception -> exception.isInstance(throwable))))
                     )
-                    .andWriteWith((key, signal) -> Mono.fromRunnable(
-                            () -> Optional.ofNullable(signal.get()).ifPresent(value -> cache.put(key, value))))
+                    .andWriteWith((key, signal) -> Mono.fromRunnable(() ->
+                            Optional.ofNullable(signal.get()).ifPresent(value -> {
+                                if (value != null && !value.isNull() && !value.isEmpty())
+                                    cache.put(key, value);
+                            })
+                    ))
                     .log("cache");
         }
     }
@@ -175,13 +175,9 @@ public class BotService {
             log.info("getBotNodeFromId from cache : " + cache.getIfPresent(cacheKey));
             return Mono.just((JsonNode) cache.getIfPresent(cacheKey));
         } else {
-            try {
-                Thread.sleep(botServiceParams.getWebclientInterval());
-            } catch (InterruptedException ex) {
-                ex.printStackTrace();
-            }
-            return CacheMono.lookup(key -> Mono.justOrEmpty((JsonNode) cache.getIfPresent(cacheKey))
-                            .map(Signal::next), cacheKey)
+            return CacheMono
+                    .lookup(key -> Mono.justOrEmpty((JsonNode) cache.getIfPresent(cacheKey))
+                    .map(Signal::next), cacheKey)
                     .onCacheMissResume(() -> webClient.get()
                             .uri(builder -> builder.path("admin/bot/" + botId).build())
                             .retrieve()
@@ -207,8 +203,12 @@ public class BotService {
                             .onErrorReturn(new ObjectMapper().createObjectNode())
                             .retryWhen(Retry.backoff(botServiceParams.getWebclientRetryMaxAttempts(), Duration.ofSeconds(botServiceParams.getGetWebclientMinBackoff())).filter(throwable -> exceptionsToHandleList.stream().anyMatch(exception -> exception.isInstance(throwable))))
                     )
-                    .andWriteWith((key, signal) -> Mono.fromRunnable(
-                            () -> Optional.ofNullable(signal.get()).ifPresent(value -> cache.put(key, value))))
+                    .andWriteWith((key, signal) -> Mono.fromRunnable(() ->
+                            Optional.ofNullable(signal.get()).ifPresent(value -> {
+                                if (value != null && !value.isNull() && !value.isEmpty())
+                                    cache.put(key, value);
+                            })
+                    ))
                     .log("cache");
         }
     }
@@ -270,11 +270,6 @@ public class BotService {
             log.info("getBotIdFromBotName from cache : " + cache.getIfPresent(cacheKey));
             return Mono.just((String) cache.getIfPresent(cacheKey));
         } else {
-            try {
-                Thread.sleep(botServiceParams.getWebclientInterval());
-            } catch (InterruptedException ex) {
-                ex.printStackTrace();
-            }
             return CacheMono.lookup(key -> Mono.justOrEmpty(cache.getIfPresent(cacheKey) != null ? cache.getIfPresent(key).toString() : null)
                             .map(Signal::next), cacheKey)
                     .onCacheMissResume(() -> webClient.get().uri(builder -> builder.path("admin/bot/search")
@@ -317,8 +312,12 @@ public class BotService {
                                     .onErrorReturn("")
                                     .retryWhen(Retry.backoff(botServiceParams.getWebclientRetryMaxAttempts(), Duration.ofSeconds(botServiceParams.getGetWebclientMinBackoff())).filter(throwable -> exceptionsToHandleList.stream().anyMatch(exception -> exception.isInstance(throwable))))
                     )
-                    .andWriteWith((key, signal) -> Mono.fromRunnable(
-                            () -> Optional.ofNullable(signal.get()).ifPresent(value -> cache.put(key, value))))
+                    .andWriteWith((key, signal) -> Mono.fromRunnable(() ->
+                            Optional.ofNullable(signal.get()).ifPresent(value -> {
+                                if (value != null && !value.isEmpty())
+                                    cache.put(key, value);
+                            })
+                    ))
                     .log("cache");
         }
     }
@@ -388,11 +387,6 @@ public class BotService {
             log.info("getAdapterByID from cache : " + cache.getIfPresent(cacheKey));
             return Mono.just((JsonNode) cache.getIfPresent(cacheKey));
         } else {
-            try {
-                Thread.sleep(botServiceParams.getWebclientInterval());
-            } catch (Exception ex) {
-                ex.printStackTrace();
-            }
             log.info("getAdapterByID from webclient : " + cache.getIfPresent(cacheKey));
             return CacheMono.lookup(key -> Mono.justOrEmpty(cache.getIfPresent(cacheKey) != null ? (JsonNode) cache.getIfPresent(key) : null)
                             .map(Signal::next), cacheKey)
@@ -426,8 +420,12 @@ public class BotService {
                                     .doOnError(throwable -> log.error("BotService:getAdapterByID::Exception: " + throwable.getMessage()))
                                     .retryWhen(Retry.backoff(botServiceParams.getWebclientRetryMaxAttempts(), Duration.ofSeconds(botServiceParams.getGetWebclientMinBackoff())).filter(throwable -> exceptionsToHandleList.stream().anyMatch(exception -> exception.isInstance(throwable))))
                     )
-                    .andWriteWith((key, signal) -> Mono.fromRunnable(
-                            () -> Optional.ofNullable(signal.get()).ifPresent(value -> cache.put(key, value))))
+                    .andWriteWith((key, signal) -> Mono.fromRunnable(() ->
+                            Optional.ofNullable(signal.get()).ifPresent(value -> {
+                                if (value != null && !value.isNull() && !value.isEmpty())
+                                    cache.put(key, value);
+                            })
+                    ))
                     .log("cache");
         }
 
@@ -513,11 +511,6 @@ public class BotService {
             log.info("getVaultCredentials from cache : " + cache.getIfPresent(cacheKey));
             return Mono.just((JsonNode) cache.getIfPresent(cacheKey));
         } else {
-            try {
-                Thread.sleep(botServiceParams.getWebclientInterval());
-            } catch (InterruptedException ex) {
-                ex.printStackTrace();
-            }
             log.info("getVaultCredentials from webclient : " + cache.getIfPresent(cacheKey));
             return CacheMono.lookup(key -> Mono.justOrEmpty(cache.getIfPresent(cacheKey) != null ? (JsonNode) cache.getIfPresent(key) : null)
                             .map(Signal::next), cacheKey)
@@ -566,11 +559,6 @@ public class BotService {
             log.info("getFirstFormByBotID from cache : " + cache.getIfPresent(cacheKey));
             return Mono.just((String) cache.getIfPresent(cacheKey));
         } else {
-            try {
-                Thread.sleep(botServiceParams.getWebclientInterval());
-            } catch (InterruptedException ex) {
-                ex.printStackTrace();
-            }
             return CacheMono.lookup(key -> Mono.justOrEmpty(cache.getIfPresent(cacheKey) != null ? cache.getIfPresent(cacheKey).toString() : null)
                             .map(Signal::next), cacheKey)
                     .onCacheMissResume(() -> webClient.get()
@@ -602,8 +590,12 @@ public class BotService {
                             .doOnError(throwable -> log.error("Error in getFirstFormByBotID >>> " + throwable.getMessage()))
                             .retryWhen(Retry.backoff(botServiceParams.getWebclientRetryMaxAttempts(), Duration.ofSeconds(botServiceParams.getGetWebclientMinBackoff())).filter(throwable -> exceptionsToHandleList.stream().anyMatch(exception -> exception.isInstance(throwable))))
                     )
-                    .andWriteWith((key, signal) -> Mono.fromRunnable(
-                            () -> Optional.ofNullable(signal.get()).ifPresent(value -> cache.put(key, value))))
+                    .andWriteWith((key, signal) -> Mono.fromRunnable(() ->
+                            Optional.ofNullable(signal.get()).ifPresent(value -> {
+                                if (value != null && !value.isEmpty())
+                                    cache.put(key, value);
+                            })
+                    ))
                     .log("cache");
         }
     }
@@ -620,11 +612,6 @@ public class BotService {
             log.info("getBotNameByBotID from cache : " + cache.getIfPresent(cacheKey));
             return Mono.just((String) cache.getIfPresent(cacheKey));
         } else {
-            try {
-                Thread.sleep(botServiceParams.getWebclientInterval());
-            } catch (InterruptedException ex) {
-                ex.printStackTrace();
-            }
             return CacheMono.lookup(key -> Mono.justOrEmpty(cache.getIfPresent(cacheKey) != null ? cache.getIfPresent(cacheKey).toString() : null)
                             .map(Signal::next), cacheKey)
                     .onCacheMissResume(() -> webClient.get()
@@ -656,8 +643,12 @@ public class BotService {
                             .doOnError(throwable -> log.error("Error in getFirstFormByBotID >>> " + throwable.getMessage()))
                             .retryWhen(Retry.backoff(botServiceParams.getWebclientRetryMaxAttempts(), Duration.ofSeconds(botServiceParams.getGetWebclientMinBackoff())).filter(throwable -> exceptionsToHandleList.stream().anyMatch(exception -> exception.isInstance(throwable))))
                     )
-                    .andWriteWith((key, signal) -> Mono.fromRunnable(
-                            () -> Optional.ofNullable(signal.get()).ifPresent(value -> cache.put(key, value))))
+                    .andWriteWith((key, signal) -> Mono.fromRunnable(() ->
+                            Optional.ofNullable(signal.get()).ifPresent(value -> {
+                                if (value != null && !value.isEmpty())
+                                    cache.put(key, value);
+                            })
+                    ))
                     .log("cache");
         }
     }

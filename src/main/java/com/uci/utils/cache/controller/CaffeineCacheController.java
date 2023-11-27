@@ -68,21 +68,14 @@ public class CaffeineCacheController {
     @DeleteMapping(path = "/removeAll")
     public ResponseEntity<Object> removeAll(@RequestHeader(name = "Authorization") String authorizationHeader) {
         try {
-            if (authorizationKey.equals(authorizationHeader)) {
-                cache.asMap().keySet().forEach(key -> {
-                    removeCache(key.toString());
-                });
-                log.info("All cache removed success");
-                Map<String, Object> map = new HashMap<>();
-                map.put("message", "Cache removed success");
-                map.put("status", "success");
-                return new ResponseEntity<>(map, HttpStatus.OK);
-            } else {
-                Map<String, Object> map = new HashMap<>();
-                map.put("message", "Unauthorized. Invalid secure key.");
-                map.put("status", "failed");
-                return new ResponseEntity<>(map, HttpStatus.UNAUTHORIZED);
-            }
+            cache.asMap().keySet().forEach(key -> {
+                removeCache(key.toString());
+            });
+            log.info("All cache removed success");
+            Map<String, Object> map = new HashMap<>();
+            map.put("message", "Cache removed success");
+            map.put("status", "success");
+            return new ResponseEntity<>(map, HttpStatus.OK);
         } catch (Exception ex) {
             log.error("CaffeineCacheController:removeAll: Error while removing cache : " + ex.getMessage());
             Map<String, Object> map = new HashMap<>();

@@ -12,7 +12,7 @@
 	<groupId>com.uci</groupId>
 	<artifactId>utils</artifactId>
 	<!--For Development we are using SNAPSHOT with version-->
-	<version>2.3.0</version>
+	<version>2.4.0</version>
 
 	<!-- On changing, Set version in build-deploy.yml to delete the previous packages if exists and deploy new package for the specified version -->
 

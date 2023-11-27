@@ -258,8 +258,7 @@ public class RedisCacheService {
             ValueOperations<String, Object> valOperations = redisTemplate.opsForValue();
             try {
                 /* Set Expire time for key */
-                redisTemplate.expire(redisKey, 1, TimeUnit.SECONDS);
-//                redisTemplate.delete(redisKey);
+                redisTemplate.delete(redisKey);
             } catch (Exception e) {
                 log.info("Exception in redis deleteCache: " + e.getMessage());
             }
