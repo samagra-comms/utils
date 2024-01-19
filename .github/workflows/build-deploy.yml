@@ -38,15 +38,6 @@ jobs:
         run: |
           echo ::set-output name=VERSION::$(grep -A 1 '<artifactId>utils</artifactId>' pom.xml | grep -oP '(?<=<version>).*?(?=</version>)')
 
-      - name: Delete package specific version
-        uses: smartsquaregmbh/delete-old-packages@v0.4.0
-        with:
-          version: ${{ steps.version.outputs.VERSION }}
-          names: |
-            com.uci.utils
-          token: ${{ secrets.TOKEN }}
-
-
       - name: Deploy
         run: mvn clean install -Pgithub deploy
         env:
