@@ -22,12 +22,12 @@ import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
 public class BotUtil {
-	public static String botEnabledStatus = "enabled";
-	public static String botLiveStatus = "live";
 
 	public static String adminUserId = "admin";
 	public static String transformerTypeBroadcast = "broadcast";
 	public static String transformerTypeGeneric = "generic";
+
+	private static final String disabledStatus = "disabled";
 
 	/**
 	 * Get true if bot is valid else invalid message, from json node data
@@ -114,7 +114,7 @@ public class BotUtil {
 	 */
 	public static Boolean checkBotLiveStatus(String status) {
 		status = status.toLowerCase();
-		if(status.equals(botLiveStatus) || status.equals(botEnabledStatus)) {
+		if(!status.equals(disabledStatus)) {
 			return true;
 		}
 		log.info("Bot is invalid as its status is not live or enabled.");
