@@ -241,7 +241,7 @@ public class UserService {
         String header = null;
         Boolean isHeader = Boolean.FALSE;
         if (meta != null && meta.containsKey("page") && !meta.get("page").isEmpty()) {
-            baseURL = CAMPAIGN_URL + "/admin/bot/getAllUsers/" + campaignID + "/" + meta.get("page");
+            baseURL = CAMPAIGN_URL + "/admin/bot/getAllUsers/" + campaignID + "/" + meta.get("segment") + "/" + meta.get("page");
         } else {
             baseURL = CAMPAIGN_URL + "/admin/bot/getAllUsers/" + campaignID;
         }
